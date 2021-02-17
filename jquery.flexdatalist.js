@@ -184,6 +184,7 @@ jQuery.fn.flexdatalist = function (_option, _value) {
                 _this.action.removeResults(event);
                 _this.action.inputWidth(event);
                 if (ignoreEvent) {
+                    ignoreEvent = false;
                     return false;
                 }
             })
