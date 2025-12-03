@@ -43,7 +43,9 @@ jQuery.fn.flexdatalist = function (_option, _value) {
         if (typeof this[0] === 'object' && typeof this[0].fvalue !== 'undefined') {
             var target = this[0];
             if (_option === 'destroy') {
-                destroy(this, _value);
+                destroy(this, _value)
+            } else if (_option === 'open') {
+                target.action.showAllResults();
             // Get/Set value
             } else if (_option === 'value') {
                 if (typeof _value === 'undefined') {
