@@ -138,8 +138,6 @@ class Flexdatalist {
         allowDuplicateValues: false,
         /** @type {boolean} Pressing Backspace on an empty alias marks then removes the last tag. */
         removeOnBackspace: true,
-        /** @type {boolean} Re-trigger the search when the alias re-gains focus. */
-        redoSearchOnFocus: true,
         /** @type {string} HTTP method for remote requests ('get' or 'post'). */
         requestType: 'get',
         /** @type {string} Content-type for POST bodies ('x-www-form-urlencoded' or 'json'). */
@@ -781,16 +779,14 @@ class Flexdatalist {
             this._actAddValueOnLeave();
         });
 
-        alias.addEventListener('click', e => {
-            this._actRedoSearch(e);
-            this._actShowAll(e);
-        });
-
         alias.addEventListener('focusout', () => {
             this._multipleEl?.classList.remove('focus');
             this._actClearText();
             this._actClearValue();
         });
+
+        // Show all options on click only when minLength is 0 (explicit opt-in).
+        alias.addEventListener('click', e => this._actShowAll(e));
 
         alias.addEventListener('keydown', e => this._onKeydown(e));
         alias.addEventListener('input',   e => this._onKeydown(e));
@@ -1026,21 +1022,6 @@ class Flexdatalist {
                     });
                 }
             }, o.searchDelay);
-        }
-    }
-
-    /**
-     * Re-trigger the last search when the alias regains focus.
-     *
-     * @private
-     * @param {FocusEvent} e
-     */
-    _actRedoSearch(e) {
-        const o = this._options;
-        const alias = this._alias.value;
-        const val = this._value;
-        if (o.redoSearchOnFocus && ((alias.length > 0 && o.multiple) || (alias.length > 0 && !val.length))) {
-            this._actSearch(e);
         }
     }
 
