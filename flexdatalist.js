@@ -1208,24 +1208,24 @@ class Flexdatalist {
      * @returns {{ value: string, text: string }}
      */
     _extractOne(val) {
-        const txt = this._getText(val);
+        const text = this._getText(val);
         const value = this._getVal(val);
         const o = this._options;
 
         if (o.multiple) {
-            if (!this._isEmpty(txt) && !this._isDup(txt)) {
-                this._texts.push(txt);
-                this._multipleAdd(value, txt);
+            if (!this._isEmpty(text) && !this._isDup(text)) {
+                this._texts.push(text);
+                this._multipleAdd(value, text);
             }
         } else {
-            if (txt && txt !== this._alias.value) {
-                this._alias.value = txt;
+            if (text && text !== this._alias.value) {
+                this._alias.value = text;
             }
             this._value = value;
             this._hiddenInput.value = this._value;
         }
 
-        return { value, text: txt };
+        return { value, text };
     }
 
     /**
