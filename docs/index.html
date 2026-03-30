@@ -617,8 +617,8 @@ console.<span class="fn">log</span>(fd.<span class="fn">getValue</span>());
                     </tr>
                     <tr>
                         <td class="px-4 py-3 font-mono text-xs">fd.getText(format?)</td>
-                        <td class="px-4 py-3 text-gray-500 text-xs">string[]|string</td>
-                        <td class="px-4 py-3">Return the user-facing display text(s) shown in the alias input. <code>format</code>: <code>'array'</code> (default) returns a <code>string[]</code>; <code>'string'</code> joins with the configured <code>valuesSeparator</code>; any other string is used as a custom join separator (e.g. <code>' | '</code>).</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">string|string[]</td>
+                        <td class="px-4 py-3">Return the user-facing display text shown in the alias input. Single mode always returns a <code>string</code>. Multiple mode: <code>'array'</code> (default) returns a <code>string[]</code>; <code>'string'</code> joins with the configured <code>valuesSeparator</code>; any other string is used as a custom join separator (e.g. <code>' | '</code>).</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-3 font-mono text-xs">fd.setValue(val)</td>

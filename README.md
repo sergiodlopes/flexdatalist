@@ -157,7 +157,7 @@ const [fd] = await Flexdatalist.init('#input', options);
 | Method | Description |
 |---|---|
 | `getValue()` | Get the current value (string, array, or object depending on mode) |
-| `getText(format?)` | Get the user-facing display text(s). `format`: `'array'` (default) returns `string[]`; `'string'` joins with `valuesSeparator`; any other string is used as a custom separator |
+| `getText(format?)` | Get the user-facing display text. Single mode returns a `string`. Multiple mode: `'array'` (default) returns `string[]`; `'string'` joins with `valuesSeparator`; any other string is used as a custom separator |
 | `setValue(val)` | Replace the current value |
 | `addValue(val)` | Append value(s) in multiple mode |
 | `removeValue(val)` | Remove a specific tag in multiple mode |
