@@ -28,9 +28,70 @@
     --fdl-shadow:       0 4px 6px -1px rgba(0,0,0,.08),
                         0 10px 25px -3px rgba(0,0,0,.08);
 
+    /* surface colors (light mode) */
+    --fdl-bg:             #ffffff;
+    --fdl-border:         #e2e8f0;
+    --fdl-text:           #1e293b;
+    --fdl-text-muted:     #64748b;
+    --fdl-hover-bg:       var(--fdl-accent);
+    --fdl-hover-fg:       var(--fdl-accent-fg);
+    --fdl-group-bg:       #f8fafc;
+    --fdl-group-border:   #e2e8f0;
+    --fdl-disabled-bg:    #f8fafc;
+    --fdl-scrollbar:      #cbd5e1;
+
     /* fetch animation — keep overrideable */
     --flexdatalist-animation-color:    var(--fdl-accent);
     --flexdatalist-animation-bg-color: rgba(255,255,255,0);
+}
+
+/* ─── Dark mode — auto via OS preference ────────────────────── */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --fdl-accent:       #818cf8;
+        --fdl-accent-fg:    #fff;
+        --fdl-accent-light: #1e1b4b;
+        --fdl-tag-bg:       #1e1b4b;
+        --fdl-tag-border:   #3730a3;
+        --fdl-tag-fg:       #a5b4fc;
+        --fdl-shadow:       0 4px 6px -1px rgba(0,0,0,.4),
+                            0 10px 25px -3px rgba(0,0,0,.4);
+
+        --fdl-bg:           #1e293b;
+        --fdl-border:       #334155;
+        --fdl-text:         #f1f5f9;
+        --fdl-text-muted:   #94a3b8;
+        --fdl-group-bg:     #0f172a;
+        --fdl-group-border: #334155;
+        --fdl-disabled-bg:  #0f172a;
+        --fdl-scrollbar:    #475569;
+
+        --flexdatalist-animation-bg-color: rgba(0,0,0,0);
+    }
+}
+
+/* ─── Manual override — data-theme="dark" (app) or .fdl-dark ── */
+[data-theme="dark"],
+.fdl-dark {
+    --fdl-accent:       #818cf8;
+    --fdl-accent-fg:    #fff;
+    --fdl-accent-light: #1e1b4b;
+    --fdl-tag-bg:       #1e1b4b;
+    --fdl-tag-border:   #3730a3;
+    --fdl-tag-fg:       #a5b4fc;
+    --fdl-shadow:       0 4px 6px -1px rgba(0,0,0,.4),
+                        0 10px 25px -3px rgba(0,0,0,.4);
+
+    --fdl-bg:           #1e293b;
+    --fdl-border:       #334155;
+    --fdl-text:         #f1f5f9;
+    --fdl-text-muted:   #94a3b8;
+    --fdl-group-bg:     #0f172a;
+    --fdl-group-border: #334155;
+    --fdl-disabled-bg:  #0f172a;
+    --fdl-scrollbar:    #475569;
+
+    --flexdatalist-animation-bg-color: rgba(0,0,0,0);
 }
 
 /* ─── Dropdown list ─────────────────────────────────────────── */
@@ -45,21 +106,21 @@
     margin: 0;
     padding: 0.25rem 0;
     list-style: none;
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: var(--fdl-bg);
+    border: 1px solid var(--fdl-border);
     border-radius: var(--fdl-radius);
     box-shadow: var(--fdl-shadow);
-    color: #1e293b;
+    color: var(--fdl-text);
     font-size: var(--fdl-font-size);
     scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+    scrollbar-color: var(--fdl-scrollbar) transparent;
 }
 
 /* ─── Result items ──────────────────────────────────────────── */
 .flexdatalist-results li {
     padding: 0.5rem 0.875rem;
     line-height: 1.5;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--fdl-border);
     transition: background 0.1s ease, color 0.1s ease;
     cursor: pointer;
 }
@@ -92,7 +153,7 @@
 /* No results */
 .flexdatalist-results li.no-results {
     font-size: 0.8125rem;
-    color: #94a3b8;
+    color: var(--fdl-text-muted);
     cursor: default;
     font-style: italic;
     text-align: center;
@@ -125,22 +186,22 @@
 
 /* ─── Grouped items ─────────────────────────────────────────── */
 .flexdatalist-results li.group {
-    background: #f8fafc;
-    color: #64748b;
+    background: var(--fdl-group-bg);
+    color: var(--fdl-text-muted);
     padding: 0.35rem 0.875rem;
     font-size: 0.7rem;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     cursor: default;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--fdl-group-border);
 }
 .flexdatalist-results li .group-name {
     font-weight: 700;
 }
 .flexdatalist-results li .group-item-count {
     font-size: 0.75em;
-    color: #94a3b8;
+    color: var(--fdl-text-muted);
     margin-left: 0.5rem;
 }
 
@@ -164,7 +225,7 @@
     clear: both;
 }
 .flexdatalist-multiple.disabled {
-    background-color: #f8fafc;
+    background-color: var(--fdl-disabled-bg);
     cursor: default;
     opacity: 0.7;
 }
@@ -206,8 +267,8 @@ li.flexdatalist-collapsed-control {
     transition: background 0.15s, border-color 0.15s;
 }
 .flexdatalist-multiple li.value:hover {
-    background: #e0e7ff;
-    border-color: #a5b4fc;
+    background: var(--fdl-accent-light);
+    border-color: var(--fdl-tag-border);
 }
 
 /* Collapsed count badge */
