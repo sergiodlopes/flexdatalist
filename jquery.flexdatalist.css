@@ -8,14 +8,15 @@
  * https://github.com/sergiodlopes/jquery-flexdatalist/
  *
  */
- .flexdatalist-results {
+ .flexdatalist-results,
+ .flexdatalist-fetching-results {
     position: absolute;
     top: 0;
     left: 0;
     border: 1px solid #444;
     border-top: none;
     background: #fff;
-    z-index: 100000;
+    z-index: 10000;
     max-height: 300px;
     overflow-y: auto;
     box-shadow: 0 4px 5px rgba(0, 0, 0, 0.15);
@@ -23,6 +24,7 @@
     list-style: none;
     margin: 0;
     padding: 0;
+    transition: height ease-in-out 500ms;
 }
 .flexdatalist-results li {
     border-bottom: 1px solid #ccc;
@@ -34,6 +36,7 @@
     font-weight: 700;
     text-decoration: underline;
 }
+.flexdatalist-results li:hover,
 .flexdatalist-results li.active {
     background: #2B82C9;
     color: #fff;
@@ -42,6 +45,13 @@
 .flexdatalist-results li.no-results {
     font-style: italic;
     color: #888;
+}
+
+.flexdatalist-fetching-results li.flexdatalist-fetching-results-loader {
+    text-align: center;
+}
+.flexdatalist-fetching-results li.flexdatalist-fetching-results-loader img {
+    height: 40px;
 }
 
 /**
@@ -65,7 +75,7 @@
 /**
  * Multiple items
  */
-.flexdatalist-multiple:before {
+.flexdatalist-multiple:after {
     content: '';
     display: block;
     clear: both;
@@ -73,25 +83,29 @@
 .flexdatalist-multiple {
     width: 100%;
     margin: 0;
-    padding: 0;
+    padding: 5px;
     list-style: none;
     text-align: left;
     cursor: text;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: left;
+    justify-content: left;
 }
 .flexdatalist-multiple.disabled {
     background-color: #eee;
     cursor: default;
 }
-.flexdatalist-multiple:after {
-    content: '';
-    display: block;
-    clear: both;
-}
 .flexdatalist-multiple li {
     display: inline-block;
     position: relative;
-    margin: 5px;
+    margin: 0;
 }
+.flexdatalist-multiple li.input-container {
+    flex-grow: 1;
+}
+
 .flexdatalist-multiple li.input-container,
 .flexdatalist-multiple li.input-container input {
     border: none;
@@ -101,6 +115,7 @@
     box-shadow: none;
 }
 
+li.flexdatalist-collapsed-items,
 .flexdatalist-multiple li.value {
     padding: 2px 25px 2px 7px;
     background: #efefef;
@@ -108,7 +123,11 @@
     border: 1px solid transparent;
     color: #444;
     line-height: 20px;
-    float: left;
+}
+li.flexdatalist-collapsed-items {
+    font-weight: 700;
+    padding: 2px 7px 2px 7px;
+    cursor: pointer;
 }
 .flexdatalist-multiple li.toggle {
     cursor: pointer;
@@ -118,7 +137,6 @@
     text-decoration: line-through;
     opacity: 0.80;
 }
-
 .flexdatalist-multiple li.value span.fdl-remove {
     font-weight: 700;
     padding: 2px 5px;
@@ -132,4 +150,42 @@
 }
 .flexdatalist-multiple li.value span.fdl-remove:hover {
     opacity: 1;
+}
+
+.flexdatalist-multiple li.value span.fdl-remove:hover {
+    opacity: 1;
+}
+
+/**
+ * Animation while flexdatalist is fetching data.
+ */
+.flexdatalist-fetch-animation {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: none;
+    z-index: 10001;
+    margin: 0;
+    padding: 0;
+
+    height: 1.5px;
+    color: rgba(0, 0, 0, 0) !important;
+    animation-duration: 1.2s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+    animation-name: fetching-animation;
+    background: linear-gradient(
+        90deg,
+        var(--flexdatalist-animation-bg-color, rgba(255, 255, 255, 0)) 2%,
+        var(--flexdatalist-animation-color,#f37a00) 18%,
+        var(--flexdatalist-animation-bg-color, rgba(255, 255, 255, 0)) 33%
+    );
+    background-size: auto;
+    background-size: 1300px;
+}
+
+@keyframes fetching-animation {
+    0% {background-position: -650px 0;}
+    100% {background-position: 650px 0;}
 }
