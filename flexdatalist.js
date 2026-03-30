@@ -776,11 +776,14 @@ class Flexdatalist {
     _bindAlias() {
         const alias = this._alias;
 
-        alias.addEventListener('focusin', e => {
-            this._actRedoSearch(e);
-            this._actShowAll(e);
+        alias.addEventListener('focusin', () => {
             this._multipleEl?.classList.add('focus');
             this._actAddValueOnLeave();
+        });
+
+        alias.addEventListener('click', e => {
+            this._actRedoSearch(e);
+            this._actShowAll(e);
         });
 
         alias.addEventListener('focusout', () => {
@@ -1688,7 +1691,8 @@ class Flexdatalist {
             ? o.params.call(this._hiddenInput, keyword)
             : { ...o.params };
 
-        const data = { ...relatives, ...params, load, selected: this._value, original: o.originalValue };
+        const data = { ...relatives, ...params, selected: this._value, original: o.originalValue };
+        if (load !== undefined) data.load = load;
         data[o.keywordParamName] = keyword;
         data[o.searchContainParamName] = o.searchContain;
 
