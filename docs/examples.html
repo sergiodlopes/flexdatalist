@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flexdatalist — Examples &amp; Testing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../flexdatalist.css">
+    <style>
+        html { scroll-behavior: smooth; }
+
+        /* nicer inputs */
+        .fdl-input {
+            width: 100%;
+            padding: 0.45rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            background: #fff;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .fdl-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+
+        /* code inside cards */
+        .code-block {
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 0.375rem;
+            padding: 0.75rem 1rem;
+            font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
+            font-size: 0.75rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        /* "stored value" badge */
+        .val-badge {
+            display: inline-block;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.25rem;
+            padding: 0.15rem 0.5rem;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #475569;
+            word-break: break-all;
+        }
+
+        /* event log */
+        #event-log { max-height: 200px; overflow-y: auto; }
+        .log-line { font-family: monospace; font-size: 0.7rem; padding: 2px 0; border-bottom: 1px solid #f1f5f9; }
+
+        /* section heading anchor */
+        .section-title { scroll-margin-top: 60px; }
+
+        /* flexdatalist-multiple inside our nicer wrapper */
+        .flexdatalist-multiple { border: 1px solid #d1d5db; border-radius: 0.375rem; background: #fff; }
+        .flexdatalist-multiple:focus-within { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased">
+
+<!-- ===== NAV ===== -->
+<nav class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <div class="max-w-6xl mx-auto px-6 flex items-center justify-between h-14">
+        <a href="index.html" class="font-bold text-lg">
+            <span class="text-indigo-600">flex</span><span class="text-gray-900">datalist</span>
+        </a>
+        <div class="hidden md:flex items-center gap-5 text-xs text-gray-500 font-medium overflow-x-auto">
+            <a href="#datalist"       class="hover:text-indigo-600 whitespace-nowrap">Datalist</a>
+            <a href="#static"         class="hover:text-indigo-600 whitespace-nowrap">Static Data</a>
+            <a href="#remote"         class="hover:text-indigo-600 whitespace-nowrap">Remote</a>
+            <a href="#multiple"       class="hover:text-indigo-600 whitespace-nowrap">Multiple</a>
+            <a href="#value-prop"     class="hover:text-indigo-600 whitespace-nowrap">valueProperty</a>
+            <a href="#text-prop"      class="hover:text-indigo-600 whitespace-nowrap">textProperty</a>
+            <a href="#groupby"        class="hover:text-indigo-600 whitespace-nowrap">groupBy</a>
+            <a href="#search-opts"    class="hover:text-indigo-600 whitespace-nowrap">Search Options</a>
+            <a href="#multi-opts"     class="hover:text-indigo-600 whitespace-nowrap">Multiple Options</a>
+            <a href="#new-item"       class="hover:text-indigo-600 whitespace-nowrap">Add New Item</a>
+            <a href="#relatives"      class="hover:text-indigo-600 whitespace-nowrap">Relatives</a>
+            <a href="#programmatic"   class="hover:text-indigo-600 whitespace-nowrap">Programmatic API</a>
+            <a href="#events-log"     class="hover:text-indigo-600 whitespace-nowrap">Events</a>
+        </div>
+        <a href="index.html" class="text-sm text-indigo-600 font-semibold ml-4">Docs</a>
+    </div>
+</nav>
+
+<!-- ===== PAGE HEADER ===== -->
+<div class="bg-gradient-to-r from-indigo-600 to-violet-700 text-white py-10 px-6 text-center">
+    <h1 class="text-3xl font-bold mb-2">Examples &amp; Testing</h1>
+    <p class="text-indigo-200 text-sm">All features demonstrated with live interactive inputs. Every input shows its stored value below it.</p>
+</div>
+
+<!-- Inline data shared across examples -->
+<script>
+const FRUITS = [
+    {id: 1,  label: 'Apple',      color: 'Red',    category: 'Pome'},
+    {id: 2,  label: 'Banana',     color: 'Yellow', category: 'Tropical'},
+    {id: 3,  label: 'Cherry',     color: 'Red',    category: 'Stone'},
+    {id: 4,  label: 'Grape',      color: 'Purple', category: 'Berry'},
+    {id: 5,  label: 'Kiwi',       color: 'Green',  category: 'Tropical'},
+    {id: 6,  label: 'Lemon',      color: 'Yellow', category: 'Citrus'},
+    {id: 7,  label: 'Mango',      color: 'Orange', category: 'Tropical'},
+    {id: 8,  label: 'Orange',     color: 'Orange', category: 'Citrus'},
+    {id: 9,  label: 'Peach',      color: 'Orange', category: 'Stone'},
+    {id: 10, label: 'Pear',       color: 'Green',  category: 'Pome'},
+    {id: 11, label: 'Pineapple',  color: 'Yellow', category: 'Tropical'},
+    {id: 12, label: 'Plum',       color: 'Purple', category: 'Stone'},
+    {id: 13, label: 'Raspberry',  color: 'Red',    category: 'Berry'},
+    {id: 14, label: 'Strawberry', color: 'Red',    category: 'Berry'},
+    {id: 15, label: 'Watermelon', color: 'Green',  category: 'Melon'},
+];
+
+const COUNTRIES_URL = 'countries.json';
+</script>
+
+<main class="max-w-6xl mx-auto px-6 py-12 space-y-16">
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 1. DATALIST -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="datalist" class="section-title">
+        <h2 class="text-xl font-bold mb-1">1. Native &lt;datalist&gt;</h2>
+        <p class="text-sm text-gray-500 mb-6">Using data from a <code class="bg-gray-100 px-1 rounded">&lt;datalist&gt;</code> element — the standard browser behaviour, enhanced with styled results.</p>
+
+        <datalist id="languages">
+            <option value="PHP">PHP</option>
+            <option value="JavaScript">JavaScript</option>
+            <option value="TypeScript">TypeScript</option>
+            <option value="Python">Python</option>
+            <option value="Ruby">Ruby</option>
+            <option value="Rust">Rust</option>
+            <option value="Go">Go</option>
+            <option value="Swift">Swift</option>
+            <option value="Kotlin">Kotlin</option>
+            <option value="C#">C#</option>
+            <option value="C++">C++</option>
+            <option value="Java">Java</option>
+            <option value="Pascal">Pascal</option>
+            <option value="FORTRAN">FORTRAN</option>
+            <option value="Lisp">Lisp</option>
+            <option value="Cobol">Cobol</option>
+        </datalist>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- 1a -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Basic datalist suggestion</h3>
+                <input type="text" class="fdl-input flexdatalist" list="languages"
+                    data-min-length="1" placeholder="Programming language…" name="lang_basic">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="lang_basic">—</span></p>
+                <div class="code-block mt-3">&lt;input class="flexdatalist" list="languages"
+       data-min-length="1" name="lang_basic"&gt;</div>
+            </div>
+
+            <!-- 1b -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Datalist — selection required</h3>
+                <input type="text" class="fdl-input flexdatalist" list="languages"
+                    data-min-length="1" data-selection-required="true"
+                    value="PHP" placeholder="Pick a language…" name="lang_required">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="lang_required">—</span></p>
+                <div class="code-block mt-3">data-selection-required="true"</div>
+            </div>
+
+            <!-- 1c -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Datalist — multiple values</h3>
+                <input type="text" class="fdl-input flexdatalist" list="languages" multiple
+                    data-min-length="1" placeholder="Add languages…" name="lang_multiple">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="lang_multiple">—</span></p>
+                <div class="code-block mt-3">multiple</div>
+            </div>
+
+            <!-- 1d -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Datalist — multiple + selection required</h3>
+                <input type="text" class="fdl-input flexdatalist" list="languages" multiple
+                    data-min-length="1" data-selection-required="true"
+                    placeholder="Pick languages…" name="lang_multi_req">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="lang_multi_req">—</span></p>
+                <div class="code-block mt-3">multiple data-selection-required="true"</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 2. STATIC DATA -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="static" class="section-title">
+        <h2 class="text-xl font-bold mb-1">2. Static Array Data</h2>
+        <p class="text-sm text-gray-500 mb-6">Pass data directly via the JS <code class="bg-gray-100 px-1 rounded">data</code> option (or point <code class="bg-gray-100 px-1 rounded">data-data</code> to a JSON file).</p>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- 2a -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Basic — search in <code>label</code></h3>
+                <input id="static-basic" type="text" class="fdl-input" placeholder="Type a fruit name…" name="fruit_basic">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="fruit_basic">—</span></p>
+                <div class="code-block mt-3">Flexdatalist.init('#el', { data: FRUITS, searchIn: ['label'], minLength: 1 });</div>
+            </div>
+
+            <!-- 2b -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Search in multiple properties (label + color)</h3>
+                <input id="static-multi-prop" type="text" class="fdl-input"
+                    placeholder="Type a fruit or color…" name="fruit_multifield">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="fruit_multifield">—</span></p>
+                <div class="code-block mt-3">searchIn: ['label', 'color'],
+visibleProperties: ['label', 'color']</div>
+            </div>
+
+            <!-- 2c JSON file -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Static JSON file (<code>data-data</code>)</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-min-length="1"
+                    placeholder="Search a country name…" name="country_file">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="country_file">—</span></p>
+                <div class="code-block mt-3">data-data="countries.json" data-search-in="name"</div>
+            </div>
+
+            <!-- 2d searchContain -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">searchContain — match anywhere</h3>
+                <input id="static-contain" type="text" class="fdl-input"
+                    placeholder="Try 'an' (finds banana, mango…)" name="fruit_contain">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="fruit_contain">—</span></p>
+                <div class="code-block mt-3">searchContain: true</div>
+            </div>
+
+            <!-- 2e searchByWord -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">searchByWord — split on spaces</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-search-by-word="true"
+                    data-min-length="1"
+                    placeholder="Try 'papua guinea'" name="country_byword">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="country_byword">—</span></p>
+                <div class="code-block mt-3">data-search-by-word="true"</div>
+            </div>
+
+            <!-- 2f searchEqual -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">searchEqual — exact full-string match <span class="inline-block bg-emerald-100 text-emerald-800 text-xs px-1.5 py-0.5 rounded font-semibold">new</span></h3>
+                <input id="static-equal" type="text" class="fdl-input"
+                    placeholder="Type 'apple' exactly" name="fruit_equal">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="fruit_equal">—</span></p>
+                <div class="code-block mt-3">searchEqual: true</div>
+            </div>
+
+            <!-- 2g minLength 0 -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">minLength: 0 — show all on focus</h3>
+                <input id="static-showall" type="text" class="fdl-input"
+                    placeholder="Click to see all fruits" name="fruit_showall">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="fruit_showall">—</span></p>
+                <div class="code-block mt-3">minLength: 0, maxShownResults: 15</div>
+            </div>
+
+            <!-- 2h searchDisabled -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">searchDisabled — skip local filtering</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-search-disabled="true"
+                    data-min-length="1"
+                    placeholder="All results shown regardless…" name="country_searchdisabled">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="country_searchdisabled">—</span></p>
+                <div class="code-block mt-3">data-search-disabled="true"</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 3. REMOTE URL -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="remote" class="section-title">
+        <h2 class="text-xl font-bold mb-1">3. Remote URL (<code>url</code> option)</h2>
+        <p class="text-sm text-gray-500 mb-6">
+            Queried on every keystroke. For demo purposes we use the local <code>countries.json</code> as
+            a <em>simulated</em> remote endpoint via <code>data-url</code>.
+            In production, your server handles filtering server-side.
+        </p>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- 3a -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Remote — basic</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-url="countries.json"
+                    data-search-in='["name","continent","capital"]'
+                    data-visible-properties='["name","continent","capital"]'
+                    data-min-length="2"
+                    placeholder="Search country/continent/capital…" name="remote_basic">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="remote_basic">—</span></p>
+                <div class="code-block mt-3">data-url="countries.json"
+data-search-in='["name","continent","capital"]'</div>
+            </div>
+
+            <!-- 3b cache -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Remote — with localStorage cache</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-url="countries.json"
+                    data-search-in="name"
+                    data-cache="true"
+                    data-cache-lifetime="120"
+                    data-min-length="1"
+                    placeholder="Cached for 120s…" name="remote_cached">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="remote_cached">—</span></p>
+                <div class="code-block mt-3">data-cache="true" data-cache-lifetime="120"</div>
+            </div>
+
+            <!-- 3c searchDelay -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">searchDelay — 800ms debounce</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-url="countries.json"
+                    data-search-in="name"
+                    data-search-delay="800"
+                    data-min-length="1"
+                    placeholder="Fast typing — waits 800ms before searching" name="remote_delay">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="remote_delay">—</span></p>
+                <div class="code-block mt-3">data-search-delay="800"</div>
+            </div>
+
+            <!-- 3d maxShownResults -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">maxShownResults: 5</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-url="countries.json"
+                    data-search-in="name"
+                    data-max-shown-results="5"
+                    data-min-length="0"
+                    placeholder="Click — shows only 5 results" name="remote_maxresults">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="remote_maxresults">—</span></p>
+                <div class="code-block mt-3">data-max-shown-results="5" data-min-length="0"</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 4. MULTIPLE VALUES -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="multiple" class="section-title">
+        <h2 class="text-xl font-bold mb-1">4. Multiple Values</h2>
+        <p class="text-sm text-gray-500 mb-6">Enable with <code class="bg-gray-100 px-1 rounded">multiple</code> attribute or option. Use Enter ↵ or comma to add tags.</p>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- 4a -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Multiple — free text</h3>
+                <input id="multi-free" type="text" class="fdl-input" multiple
+                    placeholder="Add any fruit…" name="multi_free">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="multi_free">—</span></p>
+                <div class="code-block mt-3">multiple: true</div>
+            </div>
+
+            <!-- 4b selection required -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Multiple — selection required</h3>
+                <input id="multi-req" type="text" class="fdl-input" multiple
+                    placeholder="Must pick from list…" name="multi_req">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="multi_req">—</span></p>
+                <div class="code-block mt-3">multiple: true, selectionRequired: true</div>
+            </div>
+
+            <!-- 4c pre-selected -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Multiple — pre-selected values (ids 1,3,5)</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-visible-properties='["name","continent"]'
+                    data-value-property="id"
+                    data-text-property="name"
+                    data-selection-required="true"
+                    data-min-length="1"
+                    multiple value="1,2,3"
+                    placeholder="Add more countries…" name="multi_presel">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="multi_presel">—</span></p>
+                <div class="code-block mt-3">value="1,2,3" (pre-selected by id)</div>
+            </div>
+
+            <!-- 4d limitOfValues -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">limitOfValues: 3</h3>
+                <input id="multi-limit" type="text" class="fdl-input" multiple
+                    placeholder="Max 3 fruits" name="multi_limit">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="multi_limit">—</span></p>
+                <div class="code-block mt-3">limitOfValues: 3</div>
+            </div>
+
+            <!-- 4e allowDuplicateValues -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">allowDuplicateValues</h3>
+                <input id="multi-dup" type="text" class="fdl-input" multiple
+                    placeholder="Same fruit can appear twice…" name="multi_dup">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="multi_dup">—</span></p>
+                <div class="code-block mt-3">allowDuplicateValues: true</div>
+            </div>
+
+            <!-- 4f removeOnBackspace false -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">removeOnBackspace: false</h3>
+                <input id="multi-nobksp" type="text" class="fdl-input" multiple
+                    placeholder="Backspace won't remove tags" name="multi_nobksp">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="multi_nobksp">—</span></p>
+                <div class="code-block mt-3">removeOnBackspace: false</div>
+            </div>
+
+            <!-- 4g toggleSelected -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">toggleSelected — click tag to disable</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in='["name"]'
+                    data-visible-properties='["name","continent"]'
+                    data-value-property="id"
+                    data-text-property="name"
+                    data-selection-required="true"
+                    data-toggle-selected="true"
+                    data-min-length="1"
+                    value="166,149" multiple
+                    placeholder="Click a tag to toggle it" name="multi_toggle">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="multi_toggle">—</span></p>
+                <div class="code-block mt-3">data-toggle-selected="true" value="166,149"</div>
+            </div>
+
+            <!-- 4h collapseAfterN -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">collapseAfterN: 3 <span class="inline-block bg-emerald-100 text-emerald-800 text-xs px-1.5 py-0.5 rounded font-semibold">new</span></h3>
+                <input id="multi-collapse" type="text" class="fdl-input" multiple
+                    placeholder="Add 4+ fruits to see collapse" name="multi_collapse">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="multi_collapse">—</span></p>
+                <div class="code-block mt-3">collapseAfterN: 3, collapsedValuesText: '+{count} more'</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 5. valueProperty -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="value-prop" class="section-title">
+        <h2 class="text-xl font-bold mb-1">5. <code>valueProperty</code></h2>
+        <p class="text-sm text-gray-500 mb-6">Control what value is stored/submitted. Default = display text. Set <code class="bg-gray-100 px-1 rounded">'*'</code> to store the whole object as JSON.</p>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- 5a id -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Store country <code>id</code></h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-visible-properties='["name","capital","continent"]'
+                    data-selection-required="true"
+                    data-value-property="id"
+                    data-min-length="1"
+                    placeholder="Pick a country — stores id" name="vp_id">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="vp_id">—</span></p>
+                <div class="code-block mt-3">data-value-property="id"</div>
+            </div>
+
+            <!-- 5b iso2 -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Store <code>iso2</code> code</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-selection-required="true"
+                    data-value-property="iso2"
+                    data-min-length="1"
+                    placeholder="Pick a country — stores iso2" name="vp_iso2">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="vp_iso2">—</span></p>
+                <div class="code-block mt-3">data-value-property="iso2"</div>
+            </div>
+
+            <!-- 5c * full object -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Store entire object (<code>*</code>)</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-visible-properties='["name","capital","continent"]'
+                    data-selection-required="true"
+                    data-value-property="*"
+                    data-min-length="1"
+                    placeholder="Pick a country — stores full JSON" name="vp_star">
+                <p class="text-xs text-gray-400 mt-2 break-all">Stored: <span class="val-badge" data-val="vp_star">—</span></p>
+                <div class="code-block mt-3">data-value-property="*"</div>
+            </div>
+
+            <!-- 5d * multiple -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Store entire object — multiple</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-visible-properties='["name","capital","continent"]'
+                    data-selection-required="true"
+                    data-value-property="*"
+                    data-min-length="1"
+                    multiple
+                    placeholder="Add countries — stores JSON array" name="vp_star_multi">
+                <p class="text-xs text-gray-400 mt-2 break-all">Stored: <span class="val-badge" data-val="vp_star_multi">—</span></p>
+                <div class="code-block mt-3">data-value-property="*" multiple</div>
+            </div>
+
+            <!-- 5e free type -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Free-type + valueProperty <code>*</code></h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-visible-properties='["name","capital","continent"]'
+                    data-value-property="*"
+                    data-min-length="2"
+                    placeholder="Type freely or select from list" name="vp_freetype">
+                <p class="text-xs text-gray-400 mt-2 break-all">Stored: <span class="val-badge" data-val="vp_freetype">—</span></p>
+                <div class="code-block mt-3">selectionRequired omitted → free-type allowed</div>
+            </div>
+
+            <!-- 5f fruit id -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Static array — store fruit <code>id</code></h3>
+                <input id="vp-fruit-id" type="text" class="fdl-input"
+                    placeholder="Pick a fruit — stores id" name="vp_fruit_id">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="vp_fruit_id">—</span></p>
+                <div class="code-block mt-3">valueProperty: 'id', selectionRequired: true</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 6. textProperty -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="text-prop" class="section-title">
+        <h2 class="text-xl font-bold mb-1">6. <code>textProperty</code></h2>
+        <p class="text-sm text-gray-500 mb-6">Control what text appears in the input after selection. Supports <code class="bg-gray-100 px-1 rounded">{placeholder}</code> patterns.</p>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- 6a -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">textProperty = <code>"name"</code></h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-visible-properties='["name","capital","continent"]'
+                    data-selection-required="true"
+                    data-value-property="id"
+                    data-text-property="name"
+                    data-min-length="1"
+                    placeholder="Displays country name" name="tp_name">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="tp_name">—</span></p>
+                <div class="code-block mt-3">data-text-property="name"</div>
+            </div>
+
+            <!-- 6b pattern -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">textProperty with <code>{placeholder}</code> pattern</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-visible-properties='["name","capital","continent"]'
+                    data-selection-required="true"
+                    data-value-property="id"
+                    data-text-property="{capital}, {name} ({continent})"
+                    data-min-length="1"
+                    placeholder="Displays 'Capital, Name (Continent)'" name="tp_pattern">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="tp_pattern">—</span></p>
+                <div class="code-block mt-3">data-text-property="{capital}, {name} ({continent})"</div>
+            </div>
+
+            <!-- 6c pattern + multiple -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Pattern + multiple + pre-selected (166, 149)</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-visible-properties='["name","capital","continent"]'
+                    data-selection-required="true"
+                    data-value-property="id"
+                    data-text-property="{capital}, {name}, {continent}"
+                    data-min-length="1"
+                    multiple value="166,149"
+                    placeholder="Add countries…" name="tp_multi">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="tp_multi">—</span></p>
+                <div class="code-block mt-3">data-text-property="{capital}, {name}, {continent}"
+value="166,149"</div>
+            </div>
+
+            <!-- 6d fruit pattern -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Static data — pattern <code>{label} ({color})</code></h3>
+                <input id="tp-fruit" type="text" class="fdl-input"
+                    placeholder="Pick a fruit" name="tp_fruit">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="tp_fruit">—</span></p>
+                <div class="code-block mt-3">textProperty: '{label} ({color})', valueProperty: 'id'</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 7. groupBy -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="groupby" class="section-title">
+        <h2 class="text-xl font-bold mb-1">7. <code>groupBy</code></h2>
+        <p class="text-sm text-gray-500 mb-6">Group dropdown results by a property value.</p>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- 7a continent -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Grouped by <code>continent</code></h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in='["name","continent","capital"]'
+                    data-visible-properties='["name","continent","capital"]'
+                    data-group-by="continent"
+                    data-selection-required="true"
+                    data-focus-first-result="true"
+                    data-min-length="1"
+                    data-value-property="iso2"
+                    data-text-property="{name}"
+                    placeholder="Countries grouped by continent" name="grp_continent">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="grp_continent">—</span></p>
+                <div class="code-block mt-3">data-group-by="continent"</div>
+            </div>
+
+            <!-- 7b category -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Grouped by <code>category</code> — static array</h3>
+                <input id="grp-fruit" type="text" class="fdl-input"
+                    placeholder="Fruits grouped by category" name="grp_fruit">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="grp_fruit">—</span></p>
+                <div class="code-block mt-3">groupBy: 'category'</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 8. SEARCH OPTIONS -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="search-opts" class="section-title">
+        <h2 class="text-xl font-bold mb-1">8. More Search Options</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- focusFirstResult -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">focusFirstResult — auto-highlight first item</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-selection-required="true"
+                    data-focus-first-result="true"
+                    data-min-length="1"
+                    placeholder="First result highlighted automatically" name="sr_focusfirst">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="sr_focusfirst">—</span></p>
+                <div class="code-block mt-3">data-focus-first-result="true"</div>
+            </div>
+
+            <!-- normalizeString -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">normalizeString — accent-insensitive</h3>
+                <input id="sr-normalize" type="text" class="fdl-input"
+                    placeholder="Try 'franca' → finds 'França'" name="sr_normalize">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="sr_normalize">—</span></p>
+                <div class="code-block mt-3">normalizeString: str => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')</div>
+            </div>
+
+            <!-- redoSearchOnFocus -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">redoSearchOnFocus: false</h3>
+                <input id="sr-noredo" type="text" class="fdl-input"
+                    placeholder="Re-focus won't reopen results" name="sr_noredo">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="sr_noredo">—</span></p>
+                <div class="code-block mt-3">redoSearchOnFocus: false</div>
+            </div>
+
+            <!-- selectionRequired -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">selectionRequired — clears on blur if not selected</h3>
+                <input id="sr-required" type="text" class="fdl-input"
+                    placeholder="Must pick from dropdown" name="sr_required">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="sr_required">—</span></p>
+                <div class="code-block mt-3">selectionRequired: true</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 9. ADD NEW ITEM -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="new-item" class="section-title">
+        <h2 class="text-xl font-bold mb-1">9. showAddNewItem <span class="inline-block bg-emerald-100 text-emerald-800 text-xs px-1.5 py-0.5 rounded font-semibold">new</span></h2>
+        <p class="text-sm text-gray-500 mb-6">Show an "Add" option when no results match the keyword.</p>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Single value + add new</h3>
+                <input id="new-item-single" type="text" class="fdl-input"
+                    placeholder="Type something that doesn't exist…" name="addnew_single">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="addnew_single">—</span></p>
+                <div class="code-block mt-3">showAddNewItem: true,
+addNewItemText: 'Add "{keyword}" as new fruit'</div>
+            </div>
+
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Multiple + add new</h3>
+                <input id="new-item-multi" type="text" class="fdl-input" multiple
+                    placeholder="Add existing or new fruits…" name="addnew_multi">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="addnew_multi">—</span></p>
+                <div class="code-block mt-3">multiple: true, showAddNewItem: true</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 10. RELATIVES -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="relatives" class="section-title">
+        <h2 class="text-xl font-bold mb-1">10. Relatives &amp; Chained Relatives</h2>
+        <p class="text-sm text-gray-500 mb-6">Pass sibling inputs' values with every remote request. <code class="bg-gray-100 px-1 rounded">chainedRelatives</code> disables the field until relatives are filled.</p>
+
+        <div class="bg-white border rounded-xl p-5 space-y-5">
+            <!-- Step 1 -->
+            <div>
+                <h3 class="font-semibold mb-1 text-sm text-gray-500 uppercase tracking-widest">Step 1 — Select a country (id=#rel-country)</h3>
+                <input type="text" id="rel-country" class="fdl-input flexdatalist"
+                    data-data="countries.json"
+                    data-search-in='["name","continent","capital"]'
+                    data-visible-properties='["name","continent","capital"]'
+                    data-group-by="continent"
+                    data-selection-required="true"
+                    data-focus-first-result="true"
+                    data-min-length="1"
+                    data-value-property="iso2"
+                    data-text-property="{name}"
+                    placeholder="Pick a country…" name="rel_country">
+                <p class="text-xs text-gray-400 mt-1">Stored: <span class="val-badge" data-val="rel_country">—</span></p>
+            </div>
+
+            <!-- Step 2 — relatives -->
+            <div>
+                <h3 class="font-semibold mb-1 text-sm text-gray-500 uppercase tracking-widest">Step 2 — Relatives (sends #rel-country value to server)</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-url="countries.json"
+                    data-relatives="#rel-country"
+                    data-search-in='["name","continent","capital"]'
+                    data-visible-properties='["name","continent","capital"]'
+                    data-group-by="continent"
+                    data-selection-required="true"
+                    data-focus-first-result="true"
+                    data-min-length="1"
+                    data-value-property="iso2"
+                    data-text-property="{name}"
+                    id="rel-second"
+                    placeholder="Search (sends #rel-country value with request)…" name="rel_second">
+                <p class="text-xs text-gray-400 mt-1">Stored: <span class="val-badge" data-val="rel_second">—</span></p>
+                <div class="code-block mt-2">data-relatives="#rel-country"</div>
+            </div>
+
+            <!-- Step 3 — chainedRelatives -->
+            <div>
+                <h3 class="font-semibold mb-1 text-sm text-gray-500 uppercase tracking-widest">Step 3 — chainedRelatives (disabled until Step 2 is filled)</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-url="countries.json"
+                    data-relatives="#rel-second"
+                    data-chained-relatives="true"
+                    data-search-in='["name","continent","capital"]'
+                    data-visible-properties='["name","continent","capital"]'
+                    data-group-by="continent"
+                    data-selection-required="true"
+                    data-focus-first-result="true"
+                    data-min-length="1"
+                    data-value-property="iso2"
+                    data-text-property="{name}"
+                    placeholder="Disabled until Step 2 is filled…" name="rel_chained">
+                <p class="text-xs text-gray-400 mt-1">Stored: <span class="val-badge" data-val="rel_chained">—</span></p>
+                <div class="code-block mt-2">data-relatives="#rel-second" data-chained-relatives="true"</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 11. PROGRAMMATIC API -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="programmatic" class="section-title">
+        <h2 class="text-xl font-bold mb-1">11. Programmatic API</h2>
+        <p class="text-sm text-gray-500 mb-6">Test the chainable JS API: getValue, setValue, addValue, removeValue, clear, disable, enable, readonly, search, destroy.</p>
+
+        <div class="bg-white border rounded-xl p-5">
+            <!-- The input -->
+            <input id="api-input" type="text" class="fdl-input" multiple
+                placeholder="Use the buttons below to control this input…" name="api_input">
+            <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" id="api-stored">—</span></p>
+
+            <!-- Controls -->
+            <div class="mt-4 flex flex-wrap gap-2">
+                <button onclick="apiGetValue()"     class="btn">getValue()</button>
+                <button onclick="apiSetValue()"     class="btn">setValue('1,3')</button>
+                <button onclick="apiAddValue()"     class="btn">addValue('5')</button>
+                <button onclick="apiRemoveValue()"  class="btn">removeValue('1')</button>
+                <button onclick="apiToggleValue()"  class="btn">toggleValue('3')</button>
+                <button onclick="apiClear()"        class="btn btn-red">clear()</button>
+                <button onclick="apiDisable()"      class="btn btn-gray">disable()</button>
+                <button onclick="apiEnable()"       class="btn btn-gray">enable()</button>
+                <button onclick="apiReadonly()"     class="btn btn-gray">readonly(true)</button>
+                <button onclick="apiWritable()"     class="btn btn-gray">readonly(false)</button>
+                <button onclick="apiSearch()"       class="btn">search('Apple')</button>
+                <button onclick="apiCloseResults()" class="btn">closeResults()</button>
+                <button onclick="apiDestroy()"      class="btn btn-red">destroy()</button>
+                <button onclick="apiReinit()"       class="btn btn-indigo">reinit()</button>
+            </div>
+            <div id="api-output" class="mt-3 text-xs text-gray-500 font-mono min-h-[24px]"></div>
+
+            <div class="code-block mt-4">const [fd] = Flexdatalist.init('#api-input', { data: FRUITS, multiple: true, minLength: 0 });
+fd.getValue() / fd.setValue('1,3') / fd.addValue('5') / fd.removeValue('1')
+fd.toggleValue('3') / fd.clear() / fd.disable() / fd.enable()
+fd.readonly(true) / fd.readonly(false) / fd.search('Apple') / fd.closeResults()
+fd.destroy() → use reinit() to recreate</div>
+        </div>
+
+        <!-- getOption / setOption -->
+        <div class="bg-white border rounded-xl p-5 mt-6">
+            <h3 class="font-semibold mb-3">getOption / setOption at runtime</h3>
+            <input id="api-opts" type="text" class="fdl-input"
+                placeholder="minLength starts at 3 — use buttons to change" name="api_opts">
+            <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="api_opts">—</span></p>
+            <div class="mt-3 flex flex-wrap gap-2">
+                <button onclick="optsGet()"  class="btn">getOption('minLength')</button>
+                <button onclick="optsSet0()" class="btn">setOption('minLength', 0)</button>
+                <button onclick="optsSet3()" class="btn">setOption('minLength', 3)</button>
+            </div>
+            <div id="opts-output" class="mt-2 text-xs text-gray-500 font-mono min-h-[20px]"></div>
+            <div class="code-block mt-3">fd.getOption('minLength')        // → 3
+fd.setOption('minLength', 0)     // show all on focus now</div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 12. EVENTS LOG -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="events-log" class="section-title">
+        <h2 class="text-xl font-bold mb-1">12. Events Log</h2>
+        <p class="text-sm text-gray-500 mb-6">All CustomEvents dispatched on the element, visible in real time.</p>
+
+        <div class="bg-white border rounded-xl p-5">
+            <input id="events-input" type="text" class="fdl-input" multiple
+                placeholder="Type, pick results, remove tags — watch the log…" name="events_input">
+            <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="events_input">—</span></p>
+
+            <div class="mt-4 flex items-center justify-between">
+                <p class="text-xs font-semibold text-gray-500">Event log</p>
+                <button onclick="document.getElementById('event-log').innerHTML=''" class="text-xs text-gray-400 hover:text-red-500">Clear</button>
+            </div>
+            <div id="event-log" class="mt-1 border rounded bg-gray-50 p-2 min-h-[80px]">
+                <p class="text-xs text-gray-400 italic">Events will appear here…</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 13. DISABLED / READONLY -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="disabled" class="section-title">
+        <h2 class="text-xl font-bold mb-1">13. Disabled &amp; Readonly</h2>
+        <div class="grid md:grid-cols-3 gap-6">
+            <!-- disabled via HTML attr -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Disabled (HTML attr)</h3>
+                <input type="text" class="fdl-input flexdatalist" disabled
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-min-length="1"
+                    value="" placeholder="Disabled" name="dis_attr">
+                <div class="code-block mt-3">disabled</div>
+            </div>
+
+            <!-- disabled via data attr -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Disabled (data-disabled)</h3>
+                <input type="text" class="fdl-input flexdatalist"
+                    data-disabled="true"
+                    data-data="countries.json"
+                    data-search-in="name"
+                    data-min-length="1"
+                    placeholder="Disabled via option" name="dis_opt">
+                <div class="code-block mt-3">data-disabled="true"</div>
+            </div>
+
+            <!-- readonly -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Readonly</h3>
+                <input id="readonly-ex" type="text" class="fdl-input"
+                    placeholder="Readonly input" name="readonly_ex">
+                <div class="code-block mt-3">fd.readonly(true)</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ──────────────────────────────────────────── -->
+    <!-- 14. NORMALIZESTRING ADVANCED -->
+    <!-- ──────────────────────────────────────────── -->
+    <section id="advanced" class="section-title">
+        <h2 class="text-xl font-bold mb-1">14. Advanced: Custom valuesSeparator</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">valuesSeparator: <code>|</code> (pipe)</h3>
+                <input id="adv-pipe" type="text" class="fdl-input" multiple
+                    placeholder="Add fruits — stored with | separator" name="adv_pipe">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="adv_pipe">—</span></p>
+                <div class="code-block mt-3">valuesSeparator: '|'</div>
+            </div>
+
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">noResultsText customised</h3>
+                <input id="adv-noresults" type="text" class="fdl-input"
+                    placeholder="Type something not in the list…" name="adv_noresults">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="adv_noresults">—</span></p>
+                <div class="code-block mt-3">noResultsText: '🚫 No fruit found for "{keyword}"'</div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="border-t border-gray-200 py-6 mt-10 text-center text-sm text-gray-500">
+    <a href="index.html" class="text-indigo-600 hover:underline">← Back to Documentation</a>
+</footer>
+
+<!-- shared button styles -->
+<style>
+.btn { padding: 0.3rem 0.75rem; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 600; border: 1px solid #d1d5db; background: #f8fafc; cursor: pointer; transition: background 0.1s; }
+.btn:hover { background: #e2e8f0; }
+.btn-red { border-color: #fca5a5; color: #b91c1c; }
+.btn-red:hover { background: #fee2e2; }
+.btn-gray { border-color: #d1d5db; color: #6b7280; }
+.btn-indigo { border-color: #a5b4fc; color: #4338ca; }
+.btn-indigo:hover { background: #eef2ff; }
+</style>
+
+<script src="../flexdatalist.js"></script>
+<script>
+// ──────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────
+function showVal(inputName, value) {
+    const el = document.querySelector(`[data-val="${inputName}"]`);
+    if (el) el.textContent = value === '' ? '(empty)' : JSON.stringify(value);
+}
+
+function bindChangeEvent(el, name) {
+    const update = () => showVal(name, el.value);
+    el.addEventListener('change:flexdatalist', update);
+    el.addEventListener('init:flexdatalist', update);  // fires after async init load
+    showVal(name, el.value);
+}
+
+// bind all val-badge inputs
+document.querySelectorAll('[data-val]').forEach(badge => {
+    const name = badge.dataset.val;
+    const input = document.querySelector(`[name="${name}"]`);
+    if (input) bindChangeEvent(input, name);
+});
+
+// ──────────────────────────────────────────────────
+// Section 2 — Static Array inits
+// ──────────────────────────────────────────────────
+Flexdatalist.init('#static-basic', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 1,
+});
+
+Flexdatalist.init('#static-multi-prop', {
+    data: FRUITS,
+    searchIn: ['label', 'color'],
+    visibleProperties: ['label', 'color'],
+    minLength: 1,
+});
+
+Flexdatalist.init('#static-contain', {
+    data: FRUITS,
+    searchIn: ['label'],
+    searchContain: true,
+    minLength: 1,
+});
+
+Flexdatalist.init('#static-equal', {
+    data: FRUITS,
+    searchIn: ['label'],
+    searchEqual: true,
+    minLength: 1,
+});
+
+Flexdatalist.init('#static-showall', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 0,
+    maxShownResults: 15,
+});
+
+// ──────────────────────────────────────────────────
+// Section 4 — Multiple inits
+// ──────────────────────────────────────────────────
+Flexdatalist.init('#multi-free', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 1,
+    multiple: true,
+});
+
+Flexdatalist.init('#multi-req', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 1,
+    multiple: true,
+    selectionRequired: true,
+});
+
+Flexdatalist.init('#multi-limit', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 1,
+    multiple: true,
+    limitOfValues: 3,
+    selectionRequired: true,
+});
+
+Flexdatalist.init('#multi-dup', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 1,
+    multiple: true,
+    allowDuplicateValues: true,
+});
+
+Flexdatalist.init('#multi-nobksp', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 1,
+    multiple: true,
+    removeOnBackspace: false,
+});
+
+Flexdatalist.init('#multi-collapse', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 0,
+    multiple: true,
+    collapseAfterN: 3,
+    collapsedValuesText: '+{count} more',
+});
+
+// ──────────────────────────────────────────────────
+// Section 5 — valueProperty (fruit id)
+// ──────────────────────────────────────────────────
+Flexdatalist.init('#vp-fruit-id', {
+    data: FRUITS,
+    searchIn: ['label'],
+    visibleProperties: ['label', 'color'],
+    valueProperty: 'id',
+    selectionRequired: true,
+    minLength: 1,
+});
+
+// ──────────────────────────────────────────────────
+// Section 6 — textProperty
+// ──────────────────────────────────────────────────
+Flexdatalist.init('#tp-fruit', {
+    data: FRUITS,
+    searchIn: ['label'],
+    visibleProperties: ['label', 'color', 'category'],
+    valueProperty: 'id',
+    textProperty: '{label} ({color})',
+    selectionRequired: true,
+    minLength: 1,
+});
+
+// ──────────────────────────────────────────────────
+// Section 7 — groupBy
+// ──────────────────────────────────────────────────
+Flexdatalist.init('#grp-fruit', {
+    data: FRUITS,
+    searchIn: ['label'],
+    visibleProperties: ['label', 'color'],
+    groupBy: 'category',
+    minLength: 0,
+    maxShownResults: 30,
+});
+
+// ──────────────────────────────────────────────────
+// Section 8 — Search options
+// ──────────────────────────────────────────────────
+Flexdatalist.init('#sr-normalize', {
+    data: [
+        {id: 1, label: 'França'},
+        {id: 2, label: 'España'},
+        {id: 3, label: 'Ångström'},
+        {id: 4, label: 'Crêpe'},
+        {id: 5, label: 'Naïve'},
+        {id: 6, label: 'Zürich'},
+    ],
+    searchIn: ['label'],
+    minLength: 1,
+    normalizeString: function(str) {
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    },
+});
+
+Flexdatalist.init('#sr-noredo', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 1,
+    redoSearchOnFocus: false,
+});
+
+Flexdatalist.init('#sr-required', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 1,
+    selectionRequired: true,
+});
+
+// ──────────────────────────────────────────────────
+// Section 9 — showAddNewItem
+// ──────────────────────────────────────────────────
+Flexdatalist.init('#new-item-single', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 1,
+    showAddNewItem: true,
+    addNewItemText: 'Add "{keyword}" as new fruit',
+});
+
+Flexdatalist.init('#new-item-multi', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 1,
+    multiple: true,
+    showAddNewItem: true,
+    addNewItemText: 'Add "{keyword}"',
+});
+
+// ──────────────────────────────────────────────────
+// Section 11 — Programmatic API
+// ──────────────────────────────────────────────────
+let fd = null;
+let fdOpts = null;
+
+async function initApiInput() {
+    const [instance] = await Flexdatalist.init('#api-input', {
+        data: FRUITS,
+        searchIn: ['label'],
+        valueProperty: 'id',
+        textProperty: '{label}',
+        selectionRequired: true,
+        multiple: true,
+        minLength: 0,
+    });
+    fd = instance;
+    const apiEl = document.getElementById('api-input');
+    const updateApiStored = () => { document.getElementById('api-stored').textContent = apiEl.value || '—'; };
+    fd.on('change:flexdatalist', updateApiStored);
+    fd.on('init:flexdatalist', updateApiStored);
+}
+initApiInput();
+
+function apiLog(msg) {
+    document.getElementById('api-output').textContent = '→ ' + msg;
+}
+
+function apiGetValue()    { apiLog('getValue() = ' + JSON.stringify(fd.getValue())); }
+function apiSetValue()    { fd.setValue('1,3'); apiLog('setValue(\'1,3\') done'); }
+function apiAddValue()    { fd.addValue('5'); apiLog('addValue(\'5\') done'); }
+function apiRemoveValue() { fd.removeValue('1'); apiLog('removeValue(\'1\') done'); }
+function apiToggleValue() { fd.toggleValue('3'); apiLog('toggleValue(\'3\') done'); }
+function apiClear()       { fd.clear(); apiLog('clear() done'); }
+function apiDisable()     { fd.disable(); apiLog('disable() done'); }
+function apiEnable()      { fd.enable(); apiLog('enable() done'); }
+function apiReadonly()    { fd.readonly(true); apiLog('readonly(true) done'); }
+function apiWritable()    { fd.readonly(false); apiLog('readonly(false) done'); }
+function apiSearch()      { fd.search('Apple'); apiLog('search(\'Apple\') done'); }
+function apiCloseResults(){ fd.closeResults(); apiLog('closeResults() done'); }
+function apiDestroy()     { fd.destroy(); fd = null; apiLog('destroy() done — use Reinit'); }
+async function apiReinit() { await initApiInput(); apiLog('reinit() done'); }
+
+// getOption / setOption
+async function initOptsInput() {
+    const [instance] = await Flexdatalist.init('#api-opts', {
+        data: FRUITS,
+        searchIn: ['label'],
+        minLength: 3,
+    });
+    fdOpts = instance;
+}
+initOptsInput();
+
+function optsGet()  { document.getElementById('opts-output').textContent = 'getOption(\'minLength\') = ' + fdOpts.getOption('minLength'); }
+function optsSet0() { fdOpts.setOption('minLength', 0); document.getElementById('opts-output').textContent = 'setOption(\'minLength\', 0) done — click input to see all'; }
+function optsSet3() { fdOpts.setOption('minLength', 3); document.getElementById('opts-output').textContent = 'setOption(\'minLength\', 3) done — need 3 chars again'; }
+
+// ──────────────────────────────────────────────────
+// Section 12 — Events log
+// ──────────────────────────────────────────────────
+(async function() {
+    const [evfd] = await Flexdatalist.init('#events-input', {
+        data: FRUITS,
+        searchIn: ['label'],
+        visibleProperties: ['label', 'color', 'category'],
+        valueProperty: 'id',
+        textProperty: '{label}',
+        multiple: true,
+        minLength: 0,
+        groupBy: 'category',
+    });
+
+    const evNames = [
+        'change:flexdatalist',
+        'select:flexdatalist',
+        'before:flexdatalist.data',
+        'after:flexdatalist.data',
+        'before:flexdatalist.search',
+        'after:flexdatalist.search',
+        'show:flexdatalist.results',
+        'shown:flexdatalist.results',
+        'empty:flexdatalist.results',
+        'before:flexdatalist.remove',
+        'after:flexdatalist.remove',
+    ];
+
+    const log = document.getElementById('event-log');
+
+    evNames.forEach(name => {
+        evfd.on(name, function(e) {
+            if (log.querySelector('p.italic')) log.innerHTML = '';
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            const ts = new Date().toISOString().slice(11, 23);
+            const payload = e.detail !== undefined ? JSON.stringify(e.detail).slice(0, 80) : '—';
+            line.textContent = `[${ts}] ${name}  ${payload}`;
+            log.prepend(line);
+        });
+    });
+
+    const evEl = document.getElementById('events-input');
+    evfd.on('change:flexdatalist', function() {
+        showVal('events_input', evEl.value);
+    });
+})();
+
+// ──────────────────────────────────────────────────
+// Section 13 — Readonly
+// ──────────────────────────────────────────────────
+(async function() {
+    const [rofd] = await Flexdatalist.init('#readonly-ex', {
+        data: FRUITS,
+        searchIn: ['label'],
+        minLength: 1,
+    });
+    rofd.setValue('1').readonly(true);
+})();
+
+// ──────────────────────────────────────────────────
+// Section 14 — Advanced
+// ──────────────────────────────────────────────────
+Flexdatalist.init('#adv-pipe', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 1,
+    multiple: true,
+    valuesSeparator: '|',
+});
+
+Flexdatalist.init('#adv-noresults', {
+    data: FRUITS,
+    searchIn: ['label'],
+    minLength: 1,
+    noResultsText: '🚫 No fruit found for "{keyword}"',
+});
+</script>
+</body>
+</html>

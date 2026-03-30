@@ -1,20 +1,40 @@
-jQuery.Flexdatalist
-======
+# Flexdatalist
 
-Flexdatalist is (another) jQuery autocomplete plugin with support for <code>&lt;datalist&gt;</code>. Check the documentation page to see the plugin in action.
+Flexdatalist is a standalone (zero-dependency) autocomplete / datalist input widget written in modern ES6+. It supports remote & static data, multiple-value tags, grouping, keyboard navigation, localStorage caching, and a clean chainable API.
 
-## Demo & Documentation ##
+**v3 is a complete rewrite — jQuery is no longer required.**
+
+> Looking for the jQuery version? See the [`v2` branch](https://github.com/sergiodlopes/flexdatalist/tree/v2).
+
+## Quick start
+
+```html
+<link rel="stylesheet" href="flexdatalist.css">
+<script src="flexdatalist.js"></script>
+
+<input type="text" class="flexdatalist" data-url="/api/cities" data-min-length="2">
+```
+
+Auto-discovery works out of the box: any `<input class="flexdatalist">` is initialised on `DOMContentLoaded`.
+
+### Programmatic initialisation
+
+```js
+const [fd] = await Flexdatalist.init('#city', {
+    url: '/api/cities',
+    minLength: 2,
+    multiple: true,
+});
+
+fd.on('select:flexdatalist', e => console.log(e.detail));
+```
+
+## Demo & Documentation
 
 Check out the [examples and documentation](http://projects.sergiodinislopes.pt/flexdatalist/) page.
 
-## Roadmap
+## License
 
-- Improve accessibility
-- Allow the search to be disabled on flexdatalist and just use the given list (from server-side)
-- Use CSS grid to list multiple selected values
-- Regex in JS has bad support for special and accented characters, I'll try to make some improvements __(it works since v2.3.0, but it won't highlight the word, though)__
-- Make it jQuery independent (this will take a while to make it to a release)
-
-### License
 Flexdatalist is licensed under the [MIT license](http://opensource.org/licenses/MIT).
-Copyright (c) 2016 - 2021 [Sérgio Dinis Lopes](http://github.com/sergiodlopes)
+
+Copyright (c) 2016 – 2026 [Sérgio Dinis Lopes](https://github.com/sergiodlopes)

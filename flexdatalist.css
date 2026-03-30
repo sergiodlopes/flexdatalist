@@ -1,0 +1,287 @@
+/**
+ * Flexdatalist — Default stylesheet
+ * Version: 3.0.0
+ *
+ * Customize via CSS custom properties on any ancestor element:
+ *
+ *   --fdl-accent          Highlight / active color     (default: #6366f1 indigo)
+ *   --fdl-accent-fg       Text on accent bg            (default: #fff)
+ *   --fdl-accent-light    Soft tint for match hl       (default: #eef2ff)
+ *   --fdl-tag-bg          Tag background               (default: #eef2ff)
+ *   --fdl-tag-border      Tag border                   (default: #c7d2fe)
+ *   --fdl-tag-fg          Tag text                     (default: #4338ca)
+ *   --fdl-radius          Border radius                (default: 0.5rem)
+ *   --fdl-font-size       Base font size               (default: 0.875rem)
+ *   --fdl-shadow          Dropdown shadow              (default: see below)
+ */
+
+/* ─── Custom properties ─────────────────────────────────────── */
+:root {
+    --fdl-accent:       #6366f1;
+    --fdl-accent-fg:    #fff;
+    --fdl-accent-light: #eef2ff;
+    --fdl-tag-bg:       #eef2ff;
+    --fdl-tag-border:   #c7d2fe;
+    --fdl-tag-fg:       #4338ca;
+    --fdl-radius:       0.5rem;
+    --fdl-font-size:    0.875rem;
+    --fdl-shadow:       0 4px 6px -1px rgba(0,0,0,.08),
+                        0 10px 25px -3px rgba(0,0,0,.08);
+
+    /* fetch animation — keep overrideable */
+    --flexdatalist-animation-color:    var(--fdl-accent);
+    --flexdatalist-animation-bg-color: rgba(255,255,255,0);
+}
+
+/* ─── Dropdown list ─────────────────────────────────────────── */
+.flexdatalist-results,
+.flexdatalist-fetching-results {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10000;
+    min-width: 100%;
+    max-height: 280px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--fdl-radius);
+    box-shadow: var(--fdl-shadow);
+    color: #1e293b;
+    font-size: var(--fdl-font-size);
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+/* ─── Result items ──────────────────────────────────────────── */
+.flexdatalist-results li {
+    padding: 0.5rem 0.875rem;
+    line-height: 1.5;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.1s ease, color 0.1s ease;
+    cursor: pointer;
+}
+.flexdatalist-results li:last-child {
+    border-bottom: none;
+}
+
+/* Keyword match highlight */
+.flexdatalist-results li span.highlight {
+    font-weight: 600;
+    background: var(--fdl-accent-light);
+    color: var(--fdl-accent);
+    border-radius: 0.2em;
+    padding: 0 0.15em;
+}
+
+/* Hover / keyboard-active state */
+.flexdatalist-results li:not(.no-results):not(.group):hover,
+.flexdatalist-results li.active:not(.no-results):not(.group) {
+    background: var(--fdl-accent);
+    color: var(--fdl-accent-fg);
+    cursor: pointer;
+}
+.flexdatalist-results li:not(.no-results):not(.group):hover span.highlight,
+.flexdatalist-results li.active:not(.no-results):not(.group) span.highlight {
+    background: rgba(255,255,255,0.25);
+    color: inherit;
+}
+
+/* No results */
+.flexdatalist-results li.no-results {
+    font-size: 0.8125rem;
+    color: #94a3b8;
+    cursor: default;
+    font-style: italic;
+    text-align: center;
+    padding: 0.75rem 1rem;
+}
+
+/* "Add new item" inside no-results */
+.flexdatalist-results li.no-results.add-new-item {
+    font-style: normal;
+    color: var(--fdl-accent);
+    text-align: left;
+    cursor: pointer;
+}
+.flexdatalist-results li.no-results.add-new-item:hover,
+.flexdatalist-results li.no-results.add-new-item.active {
+    background: var(--fdl-accent);
+    color: var(--fdl-accent-fg);
+}
+
+/* Fetching loader row */
+.flexdatalist-fetching-results li.flexdatalist-fetching-results-loader {
+    text-align: center;
+    padding: 0.75rem;
+    cursor: default;
+}
+.flexdatalist-fetching-results li.flexdatalist-fetching-results-loader img {
+    height: 28px;
+    opacity: 0.5;
+}
+
+/* ─── Grouped items ─────────────────────────────────────────── */
+.flexdatalist-results li.group {
+    background: #f8fafc;
+    color: #64748b;
+    padding: 0.35rem 0.875rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: default;
+    border-bottom: 1px solid #e2e8f0;
+}
+.flexdatalist-results li .group-name {
+    font-weight: 700;
+}
+.flexdatalist-results li .group-item-count {
+    font-size: 0.75em;
+    color: #94a3b8;
+    margin-left: 0.5rem;
+}
+
+/* ─── Multiple / tags container ─────────────────────────────── */
+.flexdatalist-multiple {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    width: 100%;
+    margin: 0;
+    padding: 0.3rem 0.4rem;
+    list-style: none;
+    cursor: text;
+    box-sizing: border-box;
+}
+/* clearfix fallback */
+.flexdatalist-multiple::after {
+    content: '';
+    display: block;
+    clear: both;
+}
+.flexdatalist-multiple.disabled {
+    background-color: #f8fafc;
+    cursor: default;
+    opacity: 0.7;
+}
+
+/* The grow-able input cell */
+.flexdatalist-multiple li.input-container {
+    flex: 1 1 6rem;
+    min-width: 6rem;
+}
+.flexdatalist-multiple li.input-container,
+.flexdatalist-multiple li.input-container input {
+    border: none;
+    background: transparent;
+    height: auto;
+    padding: 0.15rem 0.2rem;
+    line-height: 1.5;
+    box-shadow: none;
+    outline: none;
+    font-size: var(--fdl-font-size);
+    color: inherit;
+    width: 100%;
+}
+
+/* ─── Tags ──────────────────────────────────────────────────── */
+.flexdatalist-multiple li.value,
+li.flexdatalist-collapsed-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.5rem 0.2rem 0.65rem;
+    background: var(--fdl-tag-bg);
+    border: 1px solid var(--fdl-tag-border);
+    border-radius: 9999px; /* pill */
+    color: var(--fdl-tag-fg);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+}
+.flexdatalist-multiple li.value:hover {
+    background: #e0e7ff;
+    border-color: #a5b4fc;
+}
+
+/* Collapsed count badge */
+li.flexdatalist-collapsed-control {
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Toggle (select/deselect) styling */
+.flexdatalist-multiple li.toggle {
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.flexdatalist-multiple li.toggle.disabled {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
+/* ─── Remove (×) button inside tags ────────────────────────── */
+.flexdatalist-multiple li.value span.fdl-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-left: 0.1rem;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    line-height: 1;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--fdl-tag-fg);
+    opacity: 0.55;
+    transition: opacity 0.15s, background 0.15s;
+    /* reset absolute positioning from old CSS */
+    position: static;
+}
+.flexdatalist-multiple li.value span.fdl-remove:hover {
+    opacity: 1;
+    background: rgba(99,102,241,0.15);
+}
+
+/* ─── Utility ───────────────────────────────────────────────── */
+.flexdatalist-hidden,
+li.flexdatalist-collapsed-item {
+    display: none;
+}
+
+/* ─── Fetch progress bar ────────────────────────────────────── */
+.flexdatalist-fetch-animation {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    border: none;
+    z-index: 10001;
+    margin: 0;
+    padding: 0;
+    height: 2px;
+    color: transparent !important;
+    border-radius: 0 0 2px 2px;
+    animation:
+        fdl-fetch-slide 1.4s linear infinite;
+    background: linear-gradient(
+        90deg,
+        var(--flexdatalist-animation-bg-color) 0%,
+        var(--flexdatalist-animation-color)    40%,
+        var(--flexdatalist-animation-bg-color) 100%
+    );
+    background-size: 400% 100%;
+}
+
+@keyframes fdl-fetch-slide {
+    0%   { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+}

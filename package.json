@@ -1,30 +1,29 @@
 {
-  "name": "jQuery.Flexdatalist",
-  "description": "jQuery Datalist Autocomplete plugin",
-  "version": "2.3.0",
+  "name": "flexdatalist",
+  "description": "Standalone autocomplete/datalist input — no dependencies",
+  "version": "3.0.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sergiodlopes/jquery-flexdatalist.git"
+    "url": "https://github.com/sergiodlopes/flexdatalist.git"
   },
   "bugs": {
-    "url": "https://github.com/sergiodlopes/jquery-flexdatalist/issues"
+    "url": "https://github.com/sergiodlopes/flexdatalist/issues"
   },
-  "dependencies": {
-    "jquery": ">=1.8"
-  },
+  "main": "flexdatalist.js",
+  "style": "flexdatalist.css",
+  "files": [
+    "flexdatalist.js",
+    "flexdatalist.css"
+  ],
+  "keywords": [
+    "autocomplete",
+    "datalist",
+    "typeahead",
+    "tags",
+    "input",
+    "vanilla-js"
+  ],
   "author": "Sérgio Dinis Lopes",
   "license": "MIT",
-  "homepage": "http://projects.sergiodinislopes.pt/flexdatalist/",
-  "autoupdate": {
-    "source": "git",
-    "target": "git://github.com/sergiodlopes/jquery-flexdatalist.git",
-    "fileMap": [
-      {
-        "basePath": "",
-        "files": [
-          "jquery.flexdatalist*"
-        ]
-      }
-    ]
-  }
+  "homepage": "https://github.com/sergiodlopes/flexdatalist"
 }

@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flexdatalist — Standalone ES6 Autocomplete</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../flexdatalist.css">
+    <style>
+        /* Smooth scroll */
+        html { scroll-behavior: smooth; }
+
+        /* Code block styling */
+        pre { tab-size: 4; }
+        .code-block {
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem 1.25rem;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+            font-size: 0.825rem;
+            line-height: 1.6;
+        }
+        .code-block .kw  { color: #93c5fd; } /* keyword */
+        .code-block .st  { color: #86efac; } /* string */
+        .code-block .cm  { color: #64748b; } /* comment */
+        .code-block .fn  { color: #fde68a; } /* function */
+        .code-block .nu  { color: #f9a8d4; } /* number */
+        .code-block .ta  { color: #7dd3fc; } /* tag */
+        .code-block .at  { color: #fde68a; } /* attribute */
+
+        /* Flexdatalist demo overrides — make inputs look nicer in demo */
+        .demo-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .demo-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .badge-new { background: #dcfce7; color: #166534; }
+        .badge-type { background: #ede9fe; color: #4c1d95; }
+        .badge-default { background: #f1f5f9; color: #475569; }
+
+        /* Active nav link */
+        .nav-link { transition: color 0.15s; }
+        .nav-link:hover { color: #6366f1; }
+
+        /* Options table */
+        .opts-table th { background: #1e293b; color: #e2e8f0; }
+        .opts-table tr:nth-child(even) td { background: #f8fafc; }
+        .opts-table td code { background: #f1f5f9; padding: 0.1em 0.35em; border-radius: 0.25rem; font-size: 0.8rem; }
+    </style>
+</head>
+<body class="bg-white text-gray-800 antialiased">
+
+<!-- ===== STICKY NAV ===== -->
+<nav class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <div class="max-w-6xl mx-auto px-6 flex items-center justify-between h-14">
+        <a href="#top" class="flex items-center gap-2 font-bold text-lg">
+            <span class="text-indigo-600">flex</span><span class="text-gray-900">datalist</span>
+            <span class="badge badge-new ml-1">ES6</span>
+        </a>
+        <div class="hidden md:flex items-center gap-6 text-sm text-gray-600">
+            <a href="#quickstart" class="nav-link">Quick Start</a>
+            <a href="#options"    class="nav-link">Options</a>
+            <a href="#api"        class="nav-link">API</a>
+            <a href="#events"     class="nav-link">Events</a>
+            <a href="examples.html" class="nav-link font-semibold text-indigo-600">Examples →</a>
+        </div>
+    </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<header id="top" class="bg-gradient-to-br from-indigo-600 to-violet-700 text-white py-20 px-6">
+    <div class="max-w-3xl mx-auto text-center">
+        <h1 class="text-4xl font-extrabold tracking-tight mb-4">
+            <span class="opacity-80">flex</span>datalist
+        </h1>
+        <p class="text-indigo-200 text-lg mb-2">
+            Autocomplete / tag input. Zero jQuery dependency. Pure ES6 class.
+        </p>
+        <p class="text-indigo-300 text-sm mb-8">
+            Remote &amp; static data · multiple tags · grouping · keyboard nav · localStorage cache · chainable API
+        </p>
+
+        <!-- Live hero demo -->
+        <div class="bg-white/10 backdrop-blur rounded-xl p-6 text-left max-w-lg mx-auto">
+            <label class="block text-indigo-200 text-xs font-semibold mb-2 uppercase tracking-widest">Live demo — search a country</label>
+            <input id="hero-input" type="text"
+                class="demo-input bg-white text-gray-900"
+                placeholder="Type a country, capital or continent…"
+                data-data="countries.json"
+                data-search-in='["name","continent","capital"]'
+                data-visible-properties='["name","continent","capital"]'
+                data-group-by="continent"
+                data-selection-required="true"
+                data-focus-first-result="true"
+                data-min-length="1"
+                data-value-property="iso2"
+                data-text-property="{name}"
+                name="hero_country">
+            <p class="text-indigo-300 text-xs mt-2">Value stored: <code id="hero-val" class="text-white">—</code></p>
+        </div>
+
+        <div class="flex items-center justify-center gap-4 mt-8 text-sm">
+            <a href="#quickstart" class="bg-white text-indigo-700 font-semibold px-5 py-2 rounded-lg hover:bg-indigo-50 transition">Get Started</a>
+            <a href="examples.html" class="border border-white/40 px-5 py-2 rounded-lg hover:bg-white/10 transition">All Examples</a>
+        </div>
+    </div>
+</header>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main class="max-w-6xl mx-auto px-6 py-16 space-y-24">
+
+    <!-- ── QUICK START ── -->
+    <section id="quickstart">
+        <h2 class="text-2xl font-bold mb-1">Quick Start</h2>
+        <p class="text-gray-500 mb-6">No jQuery. No build step. Drop two files and go.</p>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">1. Include files</h3>
+                <pre class="code-block"><span class="cm">&lt;!-- CSS --&gt;</span>
+<span class="ta">&lt;link</span> <span class="at">rel</span>=<span class="st">"stylesheet"</span>
+      <span class="at">href</span>=<span class="st">"/path/to/jquery.flexdatalist.css"</span><span class="ta">&gt;</span>
+
+<span class="cm">&lt;!-- JS (no jQuery needed) --&gt;</span>
+<span class="ta">&lt;script</span> <span class="at">src</span>=<span class="st">"/path/to/flexdatalist.js"</span><span class="ta">&gt;&lt;/script&gt;</span></pre>
+            </div>
+            <div>
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">2. HTML — auto-init</h3>
+                <pre class="code-block"><span class="ta">&lt;input</span> <span class="at">type</span>=<span class="st">"text"</span>
+       <span class="at">class</span>=<span class="st">"flexdatalist"</span>
+       <span class="at">data-data</span>=<span class="st">"/api/items.json"</span>
+       <span class="at">data-search-in</span>=<span class="st">"name"</span>
+       <span class="at">data-min-length</span>=<span class="st">"1"</span>
+       <span class="at">name</span>=<span class="st">"item"</span><span class="ta">&gt;</span></pre>
+                <p class="text-xs text-gray-500 mt-2">Any <code class="bg-gray-100 px-1 rounded">input.flexdatalist</code> is initialised automatically on <code class="bg-gray-100 px-1 rounded">DOMContentLoaded</code>.</p>
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-2">3. JavaScript — programmatic init</h3>
+            <pre class="code-block"><span class="cm">// init() is async — resolves after initial data loading is done</span>
+<span class="kw">const</span> [fd] = <span class="kw">await</span> Flexdatalist.<span class="fn">init</span>(<span class="st">'#city'</span>, {
+    url:            <span class="st">'/api/cities'</span>,
+    searchIn:       [<span class="st">'name'</span>, <span class="st">'zip'</span>],
+    valueProperty:  <span class="st">'id'</span>,
+    textProperty:   <span class="st">'{name}, {zip}'</span>,
+    minLength:      <span class="nu">2</span>,
+});
+
+<span class="cm">// Chainable API</span>
+fd.<span class="fn">setValue</span>(<span class="st">'42'</span>)
+  .<span class="fn">on</span>(<span class="st">'select:flexdatalist'</span>, e =&gt; console.<span class="fn">log</span>(e.detail));
+
+<span class="cm">// Get the stored value at any time</span>
+console.<span class="fn">log</span>(fd.<span class="fn">getValue</span>());
+
+<span class="cm">// When constructing directly, use .ready instead</span>
+<span class="kw">const</span> fd2 = <span class="kw">new</span> <span class="fn">Flexdatalist</span>(document.<span class="fn">querySelector</span>(<span class="st">'#city'</span>), opts);
+<span class="kw">await</span> fd2.<span class="kw">ready</span>; <span class="cm">// resolves once initial data is loaded</span></pre>
+        </div>
+
+        <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+            <strong class="text-amber-800">Auto-init:</strong>
+            <span class="text-amber-700"> All <code class="bg-amber-100 px-1 rounded">input.flexdatalist</code> elements are initialised automatically unless they carry the class <code class="bg-amber-100 px-1 rounded">autodiscover-disabled</code>. Options are read from <code class="bg-amber-100 px-1 rounded">data-*</code> attributes (camelCase → kebab-case).</span>
+        </div>
+
+        <div class="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-sm">
+            <strong class="text-indigo-800">CSS compatibility:</strong>
+            <span class="text-indigo-700"> The new standalone class uses the <strong>exact same CSS class names</strong> as the original jQuery plugin, so <code class="bg-indigo-100 px-1 rounded">jquery.flexdatalist.css</code> works without modification.</span>
+        </div>
+    </section>
+
+    <!-- ── DATA SOURCES ── -->
+    <section id="datasources">
+        <h2 class="text-2xl font-bold mb-1">Data Sources</h2>
+        <p class="text-gray-500 mb-6">Three ways to provide data.</p>
+
+        <div class="grid md:grid-cols-3 gap-6">
+            <div class="border rounded-lg p-4">
+                <h3 class="font-semibold mb-2">Static Array</h3>
+                <p class="text-sm text-gray-500 mb-3">Pass a JS array via the <code class="bg-gray-100 px-1 rounded">data</code> option.</p>
+                <pre class="code-block text-xs">Flexdatalist.<span class="fn">init</span>(<span class="st">'#el'</span>, {
+  data: [
+    {id: <span class="nu">1</span>, label: <span class="st">'Apple'</span>},
+    {id: <span class="nu">2</span>, label: <span class="st">'Banana'</span>},
+  ]
+});</pre>
+            </div>
+            <div class="border rounded-lg p-4">
+                <h3 class="font-semibold mb-2">Static JSON File</h3>
+                <p class="text-sm text-gray-500 mb-3">Point <code class="bg-gray-100 px-1 rounded">data</code> to a URL — loaded once and cached.</p>
+                <pre class="code-block text-xs"><span class="ta">&lt;input</span>
+  <span class="at">class</span>=<span class="st">"flexdatalist"</span>
+  <span class="at">data-data</span>=<span class="st">"items.json"</span>
+  <span class="at">data-search-in</span>=<span class="st">"label"</span>
+  <span class="at">name</span>=<span class="st">"item"</span><span class="ta">&gt;</span></pre>
+            </div>
+            <div class="border rounded-lg p-4">
+                <h3 class="font-semibold mb-2">Remote URL <span class="badge badge-new">recommended for large sets</span></h3>
+                <p class="text-sm text-gray-500 mb-3">Use <code class="bg-gray-100 px-1 rounded">url</code> — queried on every keystroke.</p>
+                <pre class="code-block text-xs"><span class="ta">&lt;input</span>
+  <span class="at">class</span>=<span class="st">"flexdatalist"</span>
+  <span class="at">data-url</span>=<span class="st">"/api/search"</span>
+  <span class="at">data-search-in</span>=<span class="st">"name"</span>
+  <span class="at">name</span>=<span class="st">"item"</span><span class="ta">&gt;</span></pre>
+                <p class="text-xs text-gray-400 mt-2">Server receives: <code>keyword</code>, <code>contain</code>, <code>selected</code>, <code>load</code>, relatives.</p>
+            </div>
+        </div>
+
+        <div class="mt-4 p-4 bg-gray-50 border rounded-lg text-sm">
+            <strong>Server response format:</strong> Return a plain array <code class="bg-gray-100 px-1 rounded">[{...}]</code> or wrap it:
+            <pre class="code-block mt-2 text-xs">{
+  <span class="st">"results"</span>: [ { <span class="st">"id"</span>: <span class="nu">1</span>, <span class="st">"name"</span>: <span class="st">"Paris"</span> }, ... ],
+  <span class="st">"options"</span>: { <span class="st">"url"</span>: <span class="st">"/api/next-endpoint"</span> }  <span class="cm">// optional — override options from server</span>
+}</pre>
+        </div>
+    </section>
+
+    <!-- ── OPTIONS TABLE ── -->
+    <section id="options">
+        <h2 class="text-2xl font-bold mb-1">Options</h2>
+        <p class="text-gray-500 mb-6">Set via JS constructor object or <code class="bg-gray-100 px-1 rounded text-sm">data-*</code> attributes (camelCase → kebab-case). Options can also be changed at any time via <code class="bg-gray-100 px-1 rounded text-sm">fd.setOption(name, value)</code>.</p>
+
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="opts-table w-full text-sm border-collapse">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left font-semibold w-40">Option</th>
+                        <th class="px-4 py-3 text-left font-semibold w-28">Type</th>
+                        <th class="px-4 py-3 text-left font-semibold w-36">Default</th>
+                        <th class="px-4 py-3 text-left font-semibold">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <!-- Data -->
+                    <tr><td colspan="4" class="px-4 py-2 bg-gray-100 text-xs font-bold text-gray-500 uppercase tracking-widest">Data</td></tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">data</td>
+                        <td class="px-4 py-3 text-gray-500">Array|string</td>
+                        <td class="px-4 py-3"><code>[]</code></td>
+                        <td class="px-4 py-3">Static data array or URL string to a JSON file (loaded once, cached).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">url</td>
+                        <td class="px-4 py-3 text-gray-500">string|null</td>
+                        <td class="px-4 py-3"><code>null</code></td>
+                        <td class="px-4 py-3">Remote URL queried on every keystroke. Server-side filtering recommended for large datasets.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">params</td>
+                        <td class="px-4 py-3 text-gray-500">Object|Function</td>
+                        <td class="px-4 py-3"><code>{}</code></td>
+                        <td class="px-4 py-3">Extra query-string / body parameters sent with every remote request. May be a function <code>(keyword) =&gt; Object</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">resultsProperty</td>
+                        <td class="px-4 py-3 text-gray-500">string</td>
+                        <td class="px-4 py-3"><code>'results'</code></td>
+                        <td class="px-4 py-3">Key in the remote JSON response that holds the results array.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">keywordParamName</td>
+                        <td class="px-4 py-3 text-gray-500">string</td>
+                        <td class="px-4 py-3"><code>'keyword'</code></td>
+                        <td class="px-4 py-3">Query-string parameter name that carries the typed keyword.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">searchContainParamName</td>
+                        <td class="px-4 py-3 text-gray-500">string</td>
+                        <td class="px-4 py-3"><code>'contain'</code></td>
+                        <td class="px-4 py-3">Query-string parameter name that carries the <code>searchContain</code> flag.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">requestType</td>
+                        <td class="px-4 py-3 text-gray-500">string</td>
+                        <td class="px-4 py-3"><code>'get'</code></td>
+                        <td class="px-4 py-3">HTTP method for remote requests: <code>'get'</code> or <code>'post'</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">requestContentType</td>
+                        <td class="px-4 py-3 text-gray-500">string</td>
+                        <td class="px-4 py-3"><code>'x-www-form-urlencoded'</code></td>
+                        <td class="px-4 py-3">Content-type for POST bodies: <code>'x-www-form-urlencoded'</code> or <code>'json'</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">requestHeaders <span class="badge badge-new">new</span></td>
+                        <td class="px-4 py-3 text-gray-500">Object|null</td>
+                        <td class="px-4 py-3"><code>null</code></td>
+                        <td class="px-4 py-3">Extra HTTP headers merged into every request. Useful for Authorization tokens.</td>
+                    </tr>
+
+                    <!-- Search -->
+                    <tr><td colspan="4" class="px-4 py-2 bg-gray-100 text-xs font-bold text-gray-500 uppercase tracking-widest">Search</td></tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">searchIn</td>
+                        <td class="px-4 py-3 text-gray-500">string[]</td>
+                        <td class="px-4 py-3"><code>['label']</code></td>
+                        <td class="px-4 py-3">Properties searched when filtering results locally.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">minLength</td>
+                        <td class="px-4 py-3 text-gray-500">number</td>
+                        <td class="px-4 py-3"><code>3</code></td>
+                        <td class="px-4 py-3">Minimum characters before triggering search. Set <code>0</code> to show all results on focus.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">searchContain</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">Match keyword anywhere in the string (not just at the start).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">searchEqual <span class="badge badge-new">new</span></td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">Require an exact full-string match.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">searchByWord</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">Split keyword on spaces and match all words independently.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">searchDisabled</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">Skip local filtering entirely (rely entirely on server-side search).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">searchDelay</td>
+                        <td class="px-4 py-3 text-gray-500">number</td>
+                        <td class="px-4 py-3"><code>300</code></td>
+                        <td class="px-4 py-3">Debounce delay in ms before running a search after each keystroke.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">normalizeString</td>
+                        <td class="px-4 py-3 text-gray-500">Function|null</td>
+                        <td class="px-4 py-3"><code>null</code></td>
+                        <td class="px-4 py-3">Custom string normalizer called before comparison. Signature: <code>(string) =&gt; string</code>. Useful for accent-insensitive search (e.g. with <em>latinize</em>).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">redoSearchOnFocus</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>true</code></td>
+                        <td class="px-4 py-3">Re-trigger the search when the alias input re-gains focus.</td>
+                    </tr>
+
+                    <!-- Display -->
+                    <tr><td colspan="4" class="px-4 py-2 bg-gray-100 text-xs font-bold text-gray-500 uppercase tracking-widest">Display</td></tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">textProperty</td>
+                        <td class="px-4 py-3 text-gray-500">string|null</td>
+                        <td class="px-4 py-3"><code>null</code></td>
+                        <td class="px-4 py-3">Property (or <code>{placeholder}</code> pattern) shown in the alias input after selection. Defaults to first entry of <code>searchIn</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">valueProperty</td>
+                        <td class="px-4 py-3 text-gray-500">string|string[]|null</td>
+                        <td class="px-4 py-3"><code>null</code></td>
+                        <td class="px-4 py-3">Property stored as the actual submitted value. Use <code>'*'</code> to store the entire matched object as JSON.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">visibleProperties</td>
+                        <td class="px-4 py-3 text-gray-500">string[]</td>
+                        <td class="px-4 py-3"><code>[]</code></td>
+                        <td class="px-4 py-3">Properties rendered inside each result <code>&lt;li&gt;</code>. Supports <code>{placeholder}</code> patterns. Defaults to <code>searchIn</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">iconProperty</td>
+                        <td class="px-4 py-3 text-gray-500">string</td>
+                        <td class="px-4 py-3"><code>'thumb'</code></td>
+                        <td class="px-4 py-3">Property containing an image URL rendered as <code>&lt;img&gt;</code> in results.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">groupBy</td>
+                        <td class="px-4 py-3 text-gray-500">string|false</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">Group results by a property value (e.g. <code>'continent'</code>).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">maxShownResults</td>
+                        <td class="px-4 py-3 text-gray-500">number</td>
+                        <td class="px-4 py-3"><code>100</code></td>
+                        <td class="px-4 py-3">Maximum number of results rendered in the dropdown (0 = unlimited).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">noResultsText</td>
+                        <td class="px-4 py-3 text-gray-500">string</td>
+                        <td class="px-4 py-3"><code>'No results found for "{keyword}"'</code></td>
+                        <td class="px-4 py-3">Message shown when no results match. Set to empty string to suppress.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">resultsLoader</td>
+                        <td class="px-4 py-3 text-gray-500">string|null</td>
+                        <td class="px-4 py-3"><code>null</code></td>
+                        <td class="px-4 py-3">URL of a loading spinner image shown while fetching remote results.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">focusFirstResult</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">Automatically activate (highlight) the first result item.</td>
+                    </tr>
+
+                    <!-- Values -->
+                    <tr><td colspan="4" class="px-4 py-2 bg-gray-100 text-xs font-bold text-gray-500 uppercase tracking-widest">Values</td></tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">multiple</td>
+                        <td class="px-4 py-3 text-gray-500">boolean|null</td>
+                        <td class="px-4 py-3"><code>null</code></td>
+                        <td class="px-4 py-3">Allow multiple tags. When <code>null</code>, inferred from the <code>multiple</code> HTML attribute.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">selectionRequired</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">Require the user to select a result from the dropdown (disables free-text entry).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">limitOfValues</td>
+                        <td class="px-4 py-3 text-gray-500">number</td>
+                        <td class="px-4 py-3"><code>0</code></td>
+                        <td class="px-4 py-3">Maximum number of tags in multiple mode (0 = unlimited).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">valuesSeparator</td>
+                        <td class="px-4 py-3 text-gray-500">string</td>
+                        <td class="px-4 py-3"><code>','</code></td>
+                        <td class="px-4 py-3">Separator used when serialising multiple values into a string.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">allowDuplicateValues</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">Allow adding the same value more than once.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">removeOnBackspace</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>true</code></td>
+                        <td class="px-4 py-3">Pressing Backspace on an empty alias marks then removes the last tag.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">toggleSelected</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">Clicking a selected tag in multiple mode toggles its disabled state.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">collapseAfterN <span class="badge badge-new">new</span></td>
+                        <td class="px-4 py-3 text-gray-500">number|false</td>
+                        <td class="px-4 py-3"><code>50</code></td>
+                        <td class="px-4 py-3">Collapse multiple-value tags after this many items. Set <code>false</code> to disable collapsing.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">collapsedValuesText <span class="badge badge-new">new</span></td>
+                        <td class="px-4 py-3 text-gray-500">string</td>
+                        <td class="px-4 py-3"><code>'{count} More'</code></td>
+                        <td class="px-4 py-3">Label for the collapse toggle. <code>{count}</code> is replaced with the hidden count.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">showAddNewItem <span class="badge badge-new">new</span></td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">Show an "Add new item" option at the bottom when no results match.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">addNewItemText <span class="badge badge-new">new</span></td>
+                        <td class="px-4 py-3 text-gray-500">string</td>
+                        <td class="px-4 py-3"><code>'No results found for "{keyword}". Click to add it.'</code></td>
+                        <td class="px-4 py-3">Text of the "Add new item" option. <code>{keyword}</code> is replaced.</td>
+                    </tr>
+
+                    <!-- Relatives -->
+                    <tr><td colspan="4" class="px-4 py-2 bg-gray-100 text-xs font-bold text-gray-500 uppercase tracking-widest">Relatives</td></tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">relatives</td>
+                        <td class="px-4 py-3 text-gray-500">string|NodeList|null</td>
+                        <td class="px-4 py-3"><code>null</code></td>
+                        <td class="px-4 py-3">CSS selector or NodeList of inputs whose values are sent as <code>relatives[name]</code> with every request.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">chainedRelatives</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">Disable this input until all relatives have a value.</td>
+                    </tr>
+
+                    <!-- State -->
+                    <tr><td colspan="4" class="px-4 py-2 bg-gray-100 text-xs font-bold text-gray-500 uppercase tracking-widest">State &amp; Cache</td></tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">disabled</td>
+                        <td class="px-4 py-3 text-gray-500">boolean|null</td>
+                        <td class="px-4 py-3"><code>null</code></td>
+                        <td class="px-4 py-3">Start disabled. When <code>null</code>, inferred from the <code>disabled</code> HTML attribute.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">cache</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>true</code></td>
+                        <td class="px-4 py-3">Cache remote results in <code>localStorage</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">cacheLifetime</td>
+                        <td class="px-4 py-3 text-gray-500">number</td>
+                        <td class="px-4 py-3"><code>60</code></td>
+                        <td class="px-4 py-3">Cache lifetime in seconds.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">debug</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>true</code></td>
+                        <td class="px-4 py-3">Log warnings to the browser console.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ── API ── -->
+    <section id="api">
+        <h2 class="text-2xl font-bold mb-1">API</h2>
+        <p class="text-gray-500 mb-6">All instance methods are <strong>chainable</strong> (return <code class="bg-gray-100 px-1 rounded text-sm">this</code>) unless they return a value.</p>
+
+        <!-- Static -->
+        <h3 class="text-lg font-semibold mb-3 mt-8">Static Methods</h3>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="opts-table w-full text-sm border-collapse">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left w-80">Signature</th>
+                        <th class="px-4 py-3 text-left">Returns</th>
+                        <th class="px-4 py-3 text-left">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">Flexdatalist.init(selector, options)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">Promise&lt;Flexdatalist[]&gt;</td>
+                        <td class="px-4 py-3">Initialise on one or many elements. Accepts a CSS selector string, <code>HTMLElement</code>, or <code>NodeList</code>. Resolves after all instances have finished loading their initial data.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">Flexdatalist.getInstance(el)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">Flexdatalist|null</td>
+                        <td class="px-4 py-3">Return the instance attached to a given element, or <code>null</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">instance.ready</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">Promise&lt;Flexdatalist&gt;</td>
+                        <td class="px-4 py-3">Promise that resolves with the instance once initial data loading is complete. Useful when constructing instances directly with <code>new Flexdatalist(el, opts)</code>.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Options -->
+        <h3 class="text-lg font-semibold mb-3 mt-8">Options</h3>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="opts-table w-full text-sm border-collapse">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left w-80">Signature</th>
+                        <th class="px-4 py-3 text-left">Returns</th>
+                        <th class="px-4 py-3 text-left">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.getOption(name)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">any</td>
+                        <td class="px-4 py-3">Return the current value of an option.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.setOption(name, value)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">this</td>
+                        <td class="px-4 py-3">Update an option at runtime. Chainable.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Value -->
+        <h3 class="text-lg font-semibold mb-3 mt-8">Value</h3>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="opts-table w-full text-sm border-collapse">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left w-80">Signature</th>
+                        <th class="px-4 py-3 text-left">Returns</th>
+                        <th class="px-4 py-3 text-left">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.getValue()</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">string|Object|Array</td>
+                        <td class="px-4 py-3">Return the stored value as a string, parsed object, or array (multiple mode).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.setValue(val)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">this</td>
+                        <td class="px-4 py-3">Replace the current value. Triggers a data load to resolve display text.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.addValue(val)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">this</td>
+                        <td class="px-4 py-3">Add a value in multiple mode.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.removeValue(val)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">this</td>
+                        <td class="px-4 py-3">Remove a value in multiple mode.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.toggleValue(val)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">this</td>
+                        <td class="px-4 py-3">Add the value if not present, remove if already present.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.clear()</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">this</td>
+                        <td class="px-4 py-3">Clear all values and reset the alias input.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- State -->
+        <h3 class="text-lg font-semibold mb-3 mt-8">State</h3>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="opts-table w-full text-sm border-collapse">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left w-80">Signature</th>
+                        <th class="px-4 py-3 text-left">Returns</th>
+                        <th class="px-4 py-3 text-left">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.disable()</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">this</td>
+                        <td class="px-4 py-3">Disable the input.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.enable()</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">this</td>
+                        <td class="px-4 py-3">Enable the input.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.readonly(state?)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">boolean|this</td>
+                        <td class="px-4 py-3">Called with no argument: returns current readonly state. Called with boolean: sets readonly state (chainable).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.isDisabled()</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">boolean</td>
+                        <td class="px-4 py-3">Return <code>true</code> if currently disabled.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.isReadonly()</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">boolean</td>
+                        <td class="px-4 py-3">Return <code>true</code> if currently readonly.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Search -->
+        <h3 class="text-lg font-semibold mb-3 mt-8">Search &amp; Results</h3>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="opts-table w-full text-sm border-collapse">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left w-80">Signature</th>
+                        <th class="px-4 py-3 text-left">Returns</th>
+                        <th class="px-4 py-3 text-left">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.search(keyword)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">this</td>
+                        <td class="px-4 py-3">Programmatically trigger a search with the given keyword.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.closeResults()</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">this</td>
+                        <td class="px-4 py-3">Close the results dropdown.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Events -->
+        <h3 class="text-lg font-semibold mb-3 mt-8">Event Binding</h3>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="opts-table w-full text-sm border-collapse">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left w-80">Signature</th>
+                        <th class="px-4 py-3 text-left">Returns</th>
+                        <th class="px-4 py-3 text-left">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.on(eventName, handler)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">this</td>
+                        <td class="px-4 py-3">Attach an event listener on the underlying <code>&lt;input&gt;</code> element. Chainable.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.off(eventName, handler)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">this</td>
+                        <td class="px-4 py-3">Remove a previously attached event listener. Chainable.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Lifecycle -->
+        <h3 class="text-lg font-semibold mb-3 mt-8">Lifecycle</h3>
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="opts-table w-full text-sm border-collapse">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left w-80">Signature</th>
+                        <th class="px-4 py-3 text-left">Returns</th>
+                        <th class="px-4 py-3 text-left">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.destroy(clear = false)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">void</td>
+                        <td class="px-4 py-3">Remove all DOM additions, unbind all listeners, and unregister the instance. Pass <code>true</code> to also clear the original element's value.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Code example -->
+        <h3 class="text-lg font-semibold mb-3 mt-8">Chaining Example</h3>
+        <pre class="code-block"><span class="kw">const</span> [fd] = <span class="kw">await</span> Flexdatalist.<span class="fn">init</span>(<span class="st">'#tags'</span>, {
+    data:           myArray,
+    multiple:       <span class="kw">true</span>,
+    selectionRequired: <span class="kw">true</span>,
+    limitOfValues:  <span class="nu">5</span>,
+});
+
+fd.<span class="fn">setValue</span>(<span class="st">'1,2,3'</span>)           <span class="cm">// pre-select three values</span>
+  .<span class="fn">setOption</span>(<span class="st">'limitOfValues'</span>, <span class="nu">10</span>) <span class="cm">// change an option at runtime</span>
+  .<span class="fn">on</span>(<span class="st">'change:flexdatalist'</span>, e =&gt; {
+      console.<span class="fn">log</span>(<span class="st">'changed'</span>, e.detail); <span class="cm">// { value, text }</span>
+  })
+  .<span class="fn">on</span>(<span class="st">'select:flexdatalist'</span>, e =&gt; {
+      console.<span class="fn">log</span>(<span class="st">'selected item'</span>, e.detail); <span class="cm">// the full item object</span>
+  });
+
+<span class="cm">// Later…</span>
+fd.<span class="fn">addValue</span>(<span class="st">'4'</span>).<span class="fn">disable</span>();
+
+<span class="cm">// Or via native addEventListener</span>
+document.<span class="fn">querySelector</span>(<span class="st">'#tags'</span>)
+  .<span class="fn">addEventListener</span>(<span class="st">'select:flexdatalist'</span>, e =&gt; console.<span class="fn">log</span>(e.detail));</pre>
+    </section>
+
+    <!-- ── EVENTS ── -->
+    <section id="events">
+        <h2 class="text-2xl font-bold mb-1">Events</h2>
+        <p class="text-gray-500 mb-6">
+            All events are dispatched as <a href="https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent" class="text-indigo-600 underline" target="_blank">CustomEvent</a>
+            on the original <code class="bg-gray-100 px-1 rounded text-sm">&lt;input&gt;</code> element.
+            The payload is available at <code class="bg-gray-100 px-1 rounded text-sm">e.detail</code>.
+            Listen with <code class="bg-gray-100 px-1 rounded text-sm">fd.on(eventName, handler)</code> or the native
+            <code class="bg-gray-100 px-1 rounded text-sm">el.addEventListener(eventName, handler)</code>.
+        </p>
+
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="opts-table w-full text-sm border-collapse">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left w-64">Event Name</th>
+                        <th class="px-4 py-3 text-left w-56">e.detail</th>
+                        <th class="px-4 py-3 text-left">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">change:flexdatalist</td>
+                        <td class="px-4 py-3 text-xs text-gray-500"><code>{value, text}</code></td>
+                        <td class="px-4 py-3">Fired every time the stored value changes. <code>value</code> is the submitted value, <code>text</code> is the displayed text.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">select:flexdatalist</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">Selected item object</td>
+                        <td class="px-4 py-3">Fired when the user picks an option from the dropdown.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">before:flexdatalist.data</td>
+                        <td class="px-4 py-3 text-xs text-gray-500"><code>undefined</code></td>
+                        <td class="px-4 py-3">Fired before loading data (static or remote).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">after:flexdatalist.data</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">Data array</td>
+                        <td class="px-4 py-3">Fired after data is loaded.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">before:flexdatalist.search</td>
+                        <td class="px-4 py-3 text-xs text-gray-500"><code>{keywords, data}</code></td>
+                        <td class="px-4 py-3">Fired before local search filtering begins.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">after:flexdatalist.search</td>
+                        <td class="px-4 py-3 text-xs text-gray-500"><code>{keywords, data, results}</code></td>
+                        <td class="px-4 py-3">Fired after local search filtering, before rendering results.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">show:flexdatalist.results</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">Results array</td>
+                        <td class="px-4 py-3">Fired before results dropdown is shown.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">shown:flexdatalist.results</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">Results array</td>
+                        <td class="px-4 py-3">Fired after results dropdown is rendered.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">item:flexdatalist.results</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">Item object</td>
+                        <td class="px-4 py-3">Fired for each rendered result item.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">empty:flexdatalist.results</td>
+                        <td class="px-4 py-3 text-xs text-gray-500"><code>null</code></td>
+                        <td class="px-4 py-3">Fired when a search yields no results.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">before:flexdatalist.toggle</td>
+                        <td class="px-4 py-3 text-xs text-gray-500"><code>{value, text, action}</code></td>
+                        <td class="px-4 py-3">Fired before a multiple value is toggled. <code>action</code> is <code>"add"</code> or <code>"remove"</code>.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">after:flexdatalist.toggle</td>
+                        <td class="px-4 py-3 text-xs text-gray-500"><code>{value, text, action}</code></td>
+                        <td class="px-4 py-3">Fired after a multiple value is toggled.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">before:flexdatalist.remove</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">Value string being removed</td>
+                        <td class="px-4 py-3">Fired before a tag/value is removed.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">after:flexdatalist.remove</td>
+                        <td class="px-4 py-3 text-xs text-gray-500"><code>{value, text}</code></td>
+                        <td class="px-4 py-3">Fired after a tag/value has been removed. Reflects the new stored state.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">before:flexdatalist.remove.all</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">Current value array</td>
+                        <td class="px-4 py-3">Fired before all values are cleared (multiple mode).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">after:flexdatalist.remove.all</td>
+                        <td class="px-4 py-3 text-xs text-gray-500"><code>[]</code></td>
+                        <td class="px-4 py-3">Fired after all values have been cleared.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">addnew:flexdatalist</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">Keyword string</td>
+                        <td class="px-4 py-3">Fired when the user clicks "Add new item". <code>e.detail</code> is the typed keyword.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">clear:flexdatalist</td>
+                        <td class="px-4 py-3 text-xs text-gray-500"><code>null</code></td>
+                        <td class="px-4 py-3">Fired when the value is fully cleared.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold text-xs">init:flexdatalist</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">Options object</td>
+                        <td class="px-4 py-3">Fired after initial data loading completes (resolves <code>instance.ready</code>).</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-6">
+            <h3 class="text-lg font-semibold mb-3">Event Listener Example</h3>
+            <pre class="code-block"><span class="kw">const</span> el = document.<span class="fn">querySelector</span>(<span class="st">'#city'</span>);
+
+<span class="cm">// Using the fd instance (chainable)</span>
+<span class="kw">const</span> [fd] = Flexdatalist.<span class="fn">init</span>(el, { url: <span class="st">'/api/cities'</span> });
+fd.<span class="fn">on</span>(<span class="st">'select:flexdatalist'</span>, e =&gt; {
+    console.<span class="fn">log</span>(<span class="st">'Selected:'</span>, e.detail);
+    <span class="cm">// e.detail → { id: 42, name: 'Paris', country: 'FR' }</span>
+});
+
+<span class="cm">// Or using native DOM event (dispatched on the &lt;input&gt; element)</span>
+el.<span class="fn">addEventListener</span>(<span class="st">'change:flexdatalist'</span>, e =&gt; {
+    console.<span class="fn">log</span>(<span class="st">'Value changed:'</span>, e.detail.value, <span class="st">'→'</span>, e.detail.text);
+});</pre>
+        </div>
+    </section>
+
+    <!-- ── KEYBOARD ── -->
+    <section id="keyboard">
+        <h2 class="text-2xl font-bold mb-1">Keyboard Shortcuts</h2>
+        <p class="text-gray-500 mb-6">Available while the alias input is focused.</p>
+        <div class="grid sm:grid-cols-2 gap-3 text-sm">
+            <div class="flex items-center gap-3 p-3 border rounded-lg">
+                <kbd class="bg-gray-100 border border-gray-300 rounded px-2 py-1 font-mono text-xs">↑ ↓</kbd>
+                <span class="text-gray-600">Navigate results</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 border rounded-lg">
+                <kbd class="bg-gray-100 border border-gray-300 rounded px-2 py-1 font-mono text-xs">Enter</kbd>
+                <span class="text-gray-600">Select highlighted result / add free-text value</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 border rounded-lg">
+                <kbd class="bg-gray-100 border border-gray-300 rounded px-2 py-1 font-mono text-xs">Escape</kbd>
+                <span class="text-gray-600">Close results dropdown</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 border rounded-lg">
+                <kbd class="bg-gray-100 border border-gray-300 rounded px-2 py-1 font-mono text-xs">Tab</kbd>
+                <span class="text-gray-600">Select highlighted result and move focus</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 border rounded-lg">
+                <kbd class="bg-gray-100 border border-gray-300 rounded px-2 py-1 font-mono text-xs">,</kbd>
+                <span class="text-gray-600">Add current text as a tag (multiple mode)</span>
+            </div>
+            <div class="flex items-center gap-3 p-3 border rounded-lg">
+                <kbd class="bg-gray-100 border border-gray-300 rounded px-2 py-1 font-mono text-xs">Backspace</kbd>
+                <span class="text-gray-600">Mark / remove last tag when alias is empty</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── MIGRATION ── -->
+    <section id="migration">
+        <h2 class="text-2xl font-bold mb-1">Migrating from jQuery Plugin</h2>
+        <p class="text-gray-500 mb-6">Key differences when upgrading from the original <code class="bg-gray-100 px-1 rounded text-sm">jquery.flexdatalist.js</code>.</p>
+
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="border border-red-200 rounded-lg p-4 bg-red-50">
+                <h3 class="font-semibold text-red-700 mb-3">Before (jQuery)</h3>
+                <pre class="code-block text-xs">$(<span class="st">'#el'</span>).<span class="fn">flexdatalist</span>({ url: <span class="st">'/api'</span> });
+
+$(<span class="st">'#el'</span>).<span class="fn">flexdatalist</span>(<span class="st">'value'</span>);
+$(<span class="st">'#el'</span>).<span class="fn">flexdatalist</span>(<span class="st">'value'</span>, <span class="st">'42'</span>);
+$(<span class="st">'#el'</span>).<span class="fn">flexdatalist</span>(<span class="st">'add'</span>, <span class="st">'val'</span>);
+$(<span class="st">'#el'</span>).<span class="fn">flexdatalist</span>(<span class="st">'remove'</span>, <span class="st">'val'</span>);
+$(<span class="st">'#el'</span>).<span class="fn">flexdatalist</span>(<span class="st">'disabled'</span>, <span class="kw">true</span>);
+$(<span class="st">'#el'</span>).<span class="fn">flexdatalist</span>(<span class="st">'destroy'</span>);
+
+$(<span class="st">'#el'</span>).<span class="fn">on</span>(<span class="st">'change:flexdatalist'</span>,
+    <span class="kw">function</span>(evt, set, opts) {
+        console.<span class="fn">log</span>(set.value, set.text);
+    });</pre>
+            </div>
+            <div class="border border-green-200 rounded-lg p-4 bg-green-50">
+                <h3 class="font-semibold text-green-700 mb-3">After (ES6 Class)</h3>
+                <pre class="code-block text-xs"><span class="kw">const</span> [fd] = <span class="kw">await</span> Flexdatalist.<span class="fn">init</span>(<span class="st">'#el'</span>, { url: <span class="st">'/api'</span> });
+
+fd.<span class="fn">getValue</span>();
+fd.<span class="fn">setValue</span>(<span class="st">'42'</span>);
+fd.<span class="fn">addValue</span>(<span class="st">'val'</span>);
+fd.<span class="fn">removeValue</span>(<span class="st">'val'</span>);
+fd.<span class="fn">disable</span>();
+fd.<span class="fn">destroy</span>();
+
+fd.<span class="fn">on</span>(<span class="st">'change:flexdatalist'</span>, e =&gt; {
+    console.<span class="fn">log</span>(e.detail.value, e.detail.text);
+});
+<span class="cm">// or: el.addEventListener('change:flexdatalist', e =&gt; ...)</span></pre>
+            </div>
+        </div>
+
+        <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm space-y-1">
+            <p><strong class="text-blue-800">CSS:</strong> <span class="text-blue-700">No changes — same class names. Keep using <code class="bg-blue-100 px-1 rounded">jquery.flexdatalist.css</code>.</span></p>
+            <p><strong class="text-blue-800">HTML <code>data-*</code> attributes:</strong> <span class="text-blue-700">Unchanged — all options work the same way.</span></p>
+            <p><strong class="text-blue-800">Events:</strong> <span class="text-blue-700">Same event names. Payload moved from jQuery extra args to <code class="bg-blue-100 px-1 rounded">e.detail</code> (CustomEvent).</span></p>
+            <p><strong class="text-blue-800">Alias input:</strong> <span class="text-blue-700">No longer given a <code class="bg-blue-100 px-1 rounded">name</code> attribute — never double-submitted.</span></p>
+        </div>
+    </section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="border-t border-gray-200 py-8 mt-16">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+        <div>
+            <span class="font-semibold text-gray-700">flexdatalist</span> — standalone ES6 autocomplete
+        </div>
+        <div class="flex gap-4">
+            <a href="examples.html" class="text-indigo-600 hover:underline">All Examples →</a>
+        </div>
+    </div>
+</footer>
+
+<script src="../flexdatalist.js"></script>
+<script>
+    // Hero demo
+    const heroEl = document.querySelector('#hero-input');
+    Flexdatalist.init(heroEl);
+    heroEl.addEventListener('change:flexdatalist', function () {
+        document.querySelector('#hero-val').textContent = heroEl.value || '—';
+    });
+</script>
+</body>
+</html>

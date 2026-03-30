@@ -1,2 +1,4 @@
-*.code-workspace
-prepros.config
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
