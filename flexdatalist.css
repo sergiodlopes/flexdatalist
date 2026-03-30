@@ -297,7 +297,7 @@ li.flexdatalist-collapsed-control {
     margin-left: 0.1rem;
     border-radius: 50%;
     font-size: 0.85rem;
-    line-height: 1;
+    line-height: 1.1rem;
     font-weight: 700;
     cursor: pointer;
     color: var(--fdl-tag-fg);

@@ -616,6 +616,11 @@ console.<span class="fn">log</span>(fd.<span class="fn">getValue</span>());
                         <td class="px-4 py-3">Return the stored value as a string, parsed object, or array (multiple mode).</td>
                     </tr>
                     <tr>
+                        <td class="px-4 py-3 font-mono text-xs">fd.getText(format?)</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">string[]|string</td>
+                        <td class="px-4 py-3">Return the user-facing display text(s) shown in the alias input. <code>format</code>: <code>'array'</code> (default) returns a <code>string[]</code>; <code>'string'</code> joins with the configured <code>valuesSeparator</code>; any other string is used as a custom join separator (e.g. <code>' | '</code>).</td>
+                    </tr>
+                    <tr>
                         <td class="px-4 py-3 font-mono text-xs">fd.setValue(val)</td>
                         <td class="px-4 py-3 text-gray-500 text-xs">this</td>
                         <td class="px-4 py-3">Replace the current value. Triggers a data load to resolve display text.</td>
@@ -981,6 +986,9 @@ $(<span class="st">'#el'</span>).<span class="fn">on</span>(<span class="st">'ch
                 <pre class="code-block text-xs"><span class="kw">const</span> [fd] = <span class="kw">await</span> Flexdatalist.<span class="fn">init</span>(<span class="st">'#el'</span>, { url: <span class="st">'/api'</span> });
 
 fd.<span class="fn">getValue</span>();
+fd.<span class="fn">getText</span>();                    <span class="cm">// ['Paris', 'London']</span>
+fd.<span class="fn">getText</span>(<span class="st">'string'</span>);            <span class="cm">// 'Paris,London'</span>
+fd.<span class="fn">getText</span>(<span class="st">' | '</span>);               <span class="cm">// 'Paris | London'</span>
 fd.<span class="fn">setValue</span>(<span class="st">'42'</span>);
 fd.<span class="fn">addValue</span>(<span class="st">'val'</span>);
 fd.<span class="fn">removeValue</span>(<span class="st">'val'</span>);

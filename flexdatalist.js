@@ -478,6 +478,31 @@ class Flexdatalist {
         return this;
     }
 
+    /**
+     * Return the user-facing display text(s) shown in the alias input.
+     *
+     * @param {'array'|'string'|string} [format='array']
+     *   - `'array'`  — always returns a plain Array of strings (default).
+     *   - `'string'` — joins with the configured `valuesSeparator` (e.g. `','`).
+     *   - any other string — used directly as the join separator.
+     * @returns {string[]|string}
+     *
+     * @example
+     * fd.getText();              // ['Paris', 'London']
+     * fd.getText('string');      // 'Paris,London'
+     * fd.getText(' | ');         // 'Paris | London'
+     */
+    getText(format = 'array') {
+        const texts = this._options.multiple
+            ? [...this._texts]
+            : (this._alias?.value ? [this._alias.value] : []);
+
+        if (format === 'array') return texts;
+
+        const sep = format === 'string' ? this._options.valuesSeparator : format;
+        return texts.join(sep);
+    }
+
     // =========================================================================
     // Public API — state
     // =========================================================================
