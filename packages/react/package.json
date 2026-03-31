@@ -1,0 +1,48 @@
+{
+  "name": "flexdatalist-react",
+  "description": "React adapter for the Flexdatalist autocomplete/tag input",
+  "version": "3.0.1",
+  "type": "module",
+  "main": "dist/flexdatalist-react.es.js",
+  "module": "dist/flexdatalist-react.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/flexdatalist-react.es.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sergiodlopes/flexdatalist.git",
+    "directory": "packages/react"
+  },
+  "keywords": [
+    "flexdatalist",
+    "react",
+    "autocomplete",
+    "datalist",
+    "typeahead",
+    "tags",
+    "input"
+  ],
+  "author": "Sérgio Dinis Lopes",
+  "license": "MIT",
+  "homepage": "https://github.com/sergiodlopes/flexdatalist",
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19",
+    "flexdatalist": "^3.0.0"
+  },
+  "devDependencies": {
+    "react": "^19",
+    "react-dom": "^19",
+    "flexdatalist": "workspace:*",
+    "vite": "^6",
+    "@vitejs/plugin-react": "^4"
+  },
+  "scripts": {
+    "build": "vite build"
+  }
+}

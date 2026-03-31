@@ -1,0 +1,48 @@
+{
+  "name": "flexdatalist-svelte",
+  "description": "Svelte adapter for the Flexdatalist autocomplete/tag input",
+  "version": "3.0.1",
+  "type": "module",
+  "main": "dist/flexdatalist-svelte.es.js",
+  "module": "dist/flexdatalist-svelte.es.js",
+  "svelte": "dist/flexdatalist-svelte.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/flexdatalist-svelte.es.js",
+      "svelte": "./dist/flexdatalist-svelte.es.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sergiodlopes/flexdatalist.git",
+    "directory": "packages/svelte"
+  },
+  "keywords": [
+    "flexdatalist",
+    "svelte",
+    "autocomplete",
+    "datalist",
+    "typeahead",
+    "tags",
+    "input"
+  ],
+  "author": "Sérgio Dinis Lopes",
+  "license": "MIT",
+  "homepage": "https://github.com/sergiodlopes/flexdatalist",
+  "peerDependencies": {
+    "svelte": "^4 || ^5",
+    "flexdatalist": "^3.0.0"
+  },
+  "devDependencies": {
+    "svelte": "^5",
+    "flexdatalist": "workspace:*",
+    "vite": "^6",
+    "@sveltejs/vite-plugin-svelte": "^5"
+  },
+  "scripts": {
+    "build": "vite build"
+  }
+}

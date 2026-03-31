@@ -1,29 +1,13 @@
 {
-  "name": "flexdatalist",
-  "description": "Standalone autocomplete/datalist input — no dependencies",
-  "version": "3.0.1",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/sergiodlopes/flexdatalist.git"
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "build:core": "pnpm --filter flexdatalist build",
+    "build:vue": "pnpm --filter flexdatalist-vue build",
+    "build:react": "pnpm --filter flexdatalist-react build",
+    "build:svelte": "pnpm --filter flexdatalist-svelte build"
   },
-  "bugs": {
-    "url": "https://github.com/sergiodlopes/flexdatalist/issues"
-  },
-  "main": "flexdatalist.js",
-  "style": "flexdatalist.css",
-  "files": [
-    "flexdatalist.js",
-    "flexdatalist.css"
-  ],
-  "keywords": [
-    "autocomplete",
-    "datalist",
-    "typeahead",
-    "tags",
-    "input",
-    "vanilla-js"
-  ],
-  "author": "Sérgio Dinis Lopes",
-  "license": "MIT",
-  "homepage": "https://github.com/sergiodlopes/flexdatalist"
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
 }

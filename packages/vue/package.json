@@ -1,0 +1,46 @@
+{
+  "name": "flexdatalist-vue",
+  "description": "Vue 3 adapter for the Flexdatalist autocomplete/tag input",
+  "version": "3.0.1",
+  "type": "module",
+  "main": "dist/flexdatalist-vue.es.js",
+  "module": "dist/flexdatalist-vue.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/flexdatalist-vue.es.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sergiodlopes/flexdatalist.git",
+    "directory": "packages/vue"
+  },
+  "keywords": [
+    "flexdatalist",
+    "vue",
+    "autocomplete",
+    "datalist",
+    "typeahead",
+    "tags",
+    "input"
+  ],
+  "author": "Sérgio Dinis Lopes",
+  "license": "MIT",
+  "homepage": "https://github.com/sergiodlopes/flexdatalist",
+  "peerDependencies": {
+    "vue": "^3.3",
+    "flexdatalist": "^3.0.0"
+  },
+  "devDependencies": {
+    "vue": "^3.5",
+    "flexdatalist": "workspace:*",
+    "vite": "^6",
+    "@vitejs/plugin-vue": "^5"
+  },
+  "scripts": {
+    "build": "vite build"
+  }
+}
