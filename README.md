@@ -6,14 +6,39 @@ Flexdatalist is a standalone (zero-dependency) autocomplete / datalist input wid
 
 > Looking for the jQuery version? See the [`v2` branch](https://github.com/sergiodlopes/flexdatalist/tree/v2).
 
-## Quick Start
+## Install
 
-Include the CSS and JS files:
+### npm (recommended for bundlers)
+
+```bash
+npm install flexdatalist
+```
+
+```js
+import Flexdatalist from 'flexdatalist';
+import 'flexdatalist/css';
+```
+
+### CDN / standalone
+
+No build step needed -- just drop in the files:
 
 ```html
 <link rel="stylesheet" href="flexdatalist.css">
 <script src="flexdatalist.js"></script>
 ```
+
+### Framework adapters
+
+| Framework | Package | Install |
+|-----------|---------|---------|
+| Vue 3 | [`flexdatalist-vue`](packages/vue/) | `npm install flexdatalist flexdatalist-vue` |
+| React 18/19 | [`flexdatalist-react`](packages/react/) | `npm install flexdatalist flexdatalist-react` |
+| Svelte 4/5 | [`flexdatalist-svelte`](packages/svelte/) | `npm install flexdatalist flexdatalist-svelte` |
+
+Each adapter is a thin wrapper (~5 kB) that provides native component APIs (props, events, refs) while the core does all the heavy lifting. See each package's README for usage examples.
+
+## Quick Start
 
 Add the `flexdatalist` class to any `<input>` -- it will be initialised automatically on page load:
 
@@ -243,6 +268,71 @@ Override CSS custom properties on any ancestor to theme the widget:
 | jQuery events | Native `CustomEvent` (same event names) |
 
 CSS class names are backwards-compatible -- swap the stylesheet and it works.
+
+## Framework Usage
+
+### Vue 3
+
+```vue
+<script setup>
+import { ref } from 'vue';
+import { Flexdatalist } from 'flexdatalist-vue';
+import 'flexdatalist/css';
+
+const city = ref('');
+</script>
+
+<template>
+    <Flexdatalist
+        v-model="city"
+        url="/api/cities"
+        :min-length="2"
+        placeholder="Search for a city..."
+        @select="(item) => console.log('Selected:', item)"
+    />
+</template>
+```
+
+### React
+
+```jsx
+import { useRef } from 'react';
+import { Flexdatalist } from 'flexdatalist-react';
+import 'flexdatalist/css';
+
+function CityPicker() {
+    const ref = useRef(null);
+
+    return (
+        <Flexdatalist
+            ref={ref}
+            url="/api/cities"
+            minLength={2}
+            placeholder="Search for a city..."
+            onSelect={(item) => console.log('Selected:', item)}
+        />
+    );
+}
+```
+
+### Svelte
+
+```svelte
+<script>
+    import { Flexdatalist } from 'flexdatalist-svelte';
+    import 'flexdatalist/css';
+
+    let city = '';
+</script>
+
+<Flexdatalist
+    bind:value={city}
+    url="/api/cities"
+    minLength={2}
+    placeholder="Search for a city..."
+    on:select={(e) => console.log('Selected:', e.detail)}
+/>
+```
 
 ## Demo & Documentation
 

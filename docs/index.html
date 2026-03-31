@@ -80,6 +80,7 @@
             <a href="#options"    class="nav-link">Options</a>
             <a href="#api"        class="nav-link">API</a>
             <a href="#events"     class="nav-link">Events</a>
+            <a href="#frameworks" class="nav-link">Frameworks</a>
             <a href="examples.html" class="nav-link font-semibold text-indigo-600">Examples →</a>
         </div>
     </div>
@@ -92,10 +93,11 @@
             <span class="opacity-80">flex</span>datalist
         </h1>
         <p class="text-indigo-200 text-lg mb-2">
-            Autocomplete / tag input. Zero jQuery dependency. Pure ES6 class.
+            Autocomplete / tag input. Zero dependencies. Pure ES6 class.
         </p>
         <p class="text-indigo-300 text-sm mb-8">
             Remote &amp; static data · multiple tags · grouping · keyboard nav · localStorage cache · chainable API
+            <br>Adapters for <strong>Vue</strong>, <strong>React</strong> &amp; <strong>Svelte</strong> — or use standalone with a <code class="bg-white/10 px-1 rounded">&lt;script&gt;</code> tag
         </p>
 
         <!-- Live hero demo -->
@@ -956,6 +958,103 @@ el.<span class="fn">addEventListener</span>(<span class="st">'change:flexdatalis
                 <kbd class="bg-gray-100 border border-gray-300 rounded px-2 py-1 font-mono text-xs">Backspace</kbd>
                 <span class="text-gray-600">Mark / remove last tag when alias is empty</span>
             </div>
+        </div>
+    </section>
+
+    <!-- ── FRAMEWORK ADAPTERS ── -->
+    <section id="frameworks">
+        <h2 class="text-2xl font-bold mb-1">Framework Adapters</h2>
+        <p class="text-gray-500 mb-6">Use Flexdatalist as a native component in Vue, React, or Svelte. Each adapter is a thin wrapper (~5 kB) — the core does all the heavy lifting.</p>
+
+        <div class="mb-6">
+            <table class="w-full text-sm border-collapse">
+                <thead><tr class="bg-gray-50">
+                    <th class="text-left p-3 border font-semibold">Framework</th>
+                    <th class="text-left p-3 border font-semibold">Package</th>
+                    <th class="text-left p-3 border font-semibold">Install</th>
+                </tr></thead>
+                <tbody>
+                    <tr><td class="p-3 border">Vue 3</td><td class="p-3 border"><code class="bg-gray-100 px-1 rounded text-xs">flexdatalist-vue</code></td><td class="p-3 border"><code class="bg-gray-100 px-1 rounded text-xs">npm install flexdatalist flexdatalist-vue</code></td></tr>
+                    <tr><td class="p-3 border">React 18/19</td><td class="p-3 border"><code class="bg-gray-100 px-1 rounded text-xs">flexdatalist-react</code></td><td class="p-3 border"><code class="bg-gray-100 px-1 rounded text-xs">npm install flexdatalist flexdatalist-react</code></td></tr>
+                    <tr><td class="p-3 border">Svelte 4/5</td><td class="p-3 border"><code class="bg-gray-100 px-1 rounded text-xs">flexdatalist-svelte</code></td><td class="p-3 border"><code class="bg-gray-100 px-1 rounded text-xs">npm install flexdatalist flexdatalist-svelte</code></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6">
+            <!-- Vue -->
+            <div class="border rounded-lg overflow-hidden">
+                <div class="bg-emerald-50 border-b border-emerald-200 px-4 py-2">
+                    <h3 class="font-semibold text-emerald-800 text-sm">Vue 3</h3>
+                </div>
+                <pre class="code-block text-xs rounded-none" style="border-radius:0">&lt;<span class="ta">script</span> <span class="at">setup</span>&gt;
+<span class="kw">import</span> { ref } <span class="kw">from</span> <span class="st">'vue'</span>;
+<span class="kw">import</span> { Flexdatalist } <span class="kw">from</span> <span class="st">'flexdatalist-vue'</span>;
+<span class="kw">import</span> <span class="st">'flexdatalist/css'</span>;
+
+<span class="kw">const</span> city = <span class="fn">ref</span>(<span class="st">''</span>);
+&lt;/<span class="ta">script</span>&gt;
+
+&lt;<span class="ta">template</span>&gt;
+  &lt;<span class="ta">Flexdatalist</span>
+    <span class="at">v-model</span>=<span class="st">"city"</span>
+    <span class="at">url</span>=<span class="st">"/api/cities"</span>
+    <span class="at">:min-length</span>=<span class="st">"2"</span>
+    <span class="at">@select</span>=<span class="st">"(item) =&gt; console.log(item)"</span>
+  /&gt;
+&lt;/<span class="ta">template</span>&gt;</pre>
+            </div>
+
+            <!-- React -->
+            <div class="border rounded-lg overflow-hidden">
+                <div class="bg-sky-50 border-b border-sky-200 px-4 py-2">
+                    <h3 class="font-semibold text-sky-800 text-sm">React</h3>
+                </div>
+                <pre class="code-block text-xs rounded-none" style="border-radius:0"><span class="kw">import</span> { Flexdatalist } <span class="kw">from</span> <span class="st">'flexdatalist-react'</span>;
+<span class="kw">import</span> <span class="st">'flexdatalist/css'</span>;
+
+<span class="kw">function</span> <span class="fn">App</span>() {
+  <span class="kw">return</span> (
+    &lt;<span class="ta">Flexdatalist</span>
+      <span class="at">url</span>=<span class="st">"/api/cities"</span>
+      <span class="at">minLength</span>={<span class="nu">2</span>}
+      <span class="at">onSelect</span>={(item) =&gt;
+        console.<span class="fn">log</span>(item)
+      }
+    /&gt;
+  );
+}</pre>
+            </div>
+
+            <!-- Svelte -->
+            <div class="border rounded-lg overflow-hidden">
+                <div class="bg-orange-50 border-b border-orange-200 px-4 py-2">
+                    <h3 class="font-semibold text-orange-800 text-sm">Svelte</h3>
+                </div>
+                <pre class="code-block text-xs rounded-none" style="border-radius:0">&lt;<span class="ta">script</span>&gt;
+  <span class="kw">import</span> { Flexdatalist }
+    <span class="kw">from</span> <span class="st">'flexdatalist-svelte'</span>;
+  <span class="kw">import</span> <span class="st">'flexdatalist/css'</span>;
+
+  <span class="kw">let</span> city = <span class="st">''</span>;
+&lt;/<span class="ta">script</span>&gt;
+
+&lt;<span class="ta">Flexdatalist</span>
+  <span class="at">bind:value</span>={city}
+  <span class="at">url</span>=<span class="st">"/api/cities"</span>
+  <span class="at">minLength</span>={<span class="nu">2</span>}
+  <span class="at">on:select</span>={(e) =&gt;
+    console.<span class="fn">log</span>(e.detail)
+  }
+/&gt;</pre>
+            </div>
+        </div>
+
+        <div class="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-sm space-y-1">
+            <p><strong class="text-indigo-800">All options</strong> <span class="text-indigo-700">are available as component props in every adapter.</span></p>
+            <p><strong class="text-indigo-800">All events</strong> <span class="text-indigo-700">are re-emitted as framework-native events (<code class="bg-indigo-100 px-1 rounded">@select</code>, <code class="bg-indigo-100 px-1 rounded">onSelect</code>, <code class="bg-indigo-100 px-1 rounded">on:select</code>).</span></p>
+            <p><strong class="text-indigo-800">Instance methods</strong> <span class="text-indigo-700">are exposed via refs — <code class="bg-indigo-100 px-1 rounded">getValue()</code>, <code class="bg-indigo-100 px-1 rounded">setValue()</code>, <code class="bg-indigo-100 px-1 rounded">search()</code>, <code class="bg-indigo-100 px-1 rounded">clear()</code>, etc.</span></p>
+            <p><strong class="text-indigo-800">Standalone use</strong> <span class="text-indigo-700">still works — just use <code class="bg-indigo-100 px-1 rounded">&lt;script src="flexdatalist.js"&gt;</code> with no framework.</span></p>
         </div>
     </section>
 
