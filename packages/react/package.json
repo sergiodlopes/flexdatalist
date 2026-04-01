@@ -1,7 +1,7 @@
 {
   "name": "flexdatalist-react",
   "description": "React adapter for the Flexdatalist autocomplete/tag input",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "type": "module",
   "main": "dist/flexdatalist-react.es.js",
   "module": "dist/flexdatalist-react.es.js",

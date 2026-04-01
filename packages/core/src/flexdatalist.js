@@ -6,7 +6,7 @@
  *
  * Compatible CSS: use flexdatalist.css (class names are identical to v2).
  *
- * @version 3.0.1
+ * @version 3.1.0
  * @license MIT
  *
  * Basic usage
