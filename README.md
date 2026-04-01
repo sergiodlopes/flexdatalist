@@ -1,5 +1,9 @@
 # Flexdatalist
 
+[![npm version](https://img.shields.io/npm/v/flexdatalist)](https://www.npmjs.com/package/flexdatalist)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/flexdatalist)](https://bundlephobia.com/package/flexdatalist)
+[![license](https://img.shields.io/npm/l/flexdatalist)](https://opensource.org/licenses/MIT)
+
 Flexdatalist is a standalone (zero-dependency) autocomplete / datalist input widget written in modern ES6+. It supports remote and static data sources, `<datalist>` elements, multiple-value tag input, result grouping, keyboard navigation, localStorage caching, and a clean chainable API.
 
 **v3 is a complete rewrite -- jQuery is no longer required.**

@@ -55,6 +55,33 @@
         /* section heading anchor */
         .section-title { scroll-margin-top: 60px; }
 
+        /* nav dropdowns */
+        .nav-drop { position: relative; }
+        .nav-drop-btn {
+            display: flex; align-items: center; gap: 3px;
+            padding: 0.45rem 0.65rem;
+            cursor: pointer; background: none; border: none;
+            font: inherit; font-size: 0.8rem; font-weight: 500;
+            color: #6b7280; transition: color 0.15s;
+        }
+        .nav-drop-btn:hover, .nav-drop:hover .nav-drop-btn { color: #6366f1; }
+        .nav-drop-menu {
+            display: none; position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+            background: #fff; border: 1px solid #e5e7eb; border-radius: 0.5rem;
+            box-shadow: 0 4px 16px rgb(0 0 0 / 0.08); padding: 0.3rem 0;
+            min-width: 190px; z-index: 60;
+        }
+        .nav-drop::before {
+            content: ''; position: absolute; top: 100%; left: 0; right: 0; height: 8px;
+        }
+        .nav-drop:hover .nav-drop-menu { display: block; }
+        .nav-drop-menu a {
+            display: block; padding: 0.4rem 1rem;
+            color: #4b5563; font-size: 0.8rem; white-space: nowrap;
+            transition: background 0.1s, color 0.1s;
+        }
+        .nav-drop-menu a:hover { background: #eef2ff; color: #4f46e5; }
+
         /* flexdatalist-multiple inside our nicer wrapper */
         .flexdatalist-multiple { border: 1px solid #d1d5db; border-radius: 0.375rem; background: #fff; }
         .flexdatalist-multiple:focus-within { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
@@ -65,25 +92,52 @@
 <!-- ===== NAV ===== -->
 <nav class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
     <div class="max-w-6xl mx-auto px-6 flex items-center justify-between h-14">
-        <a href="index.html" class="font-bold text-lg">
+        <a href="index.html" class="font-bold text-lg shrink-0">
             <span class="text-indigo-600">flex</span><span class="text-gray-900">datalist</span>
         </a>
-        <div class="hidden md:flex items-center gap-5 text-xs text-gray-500 font-medium overflow-x-auto">
-            <a href="#datalist"       class="hover:text-indigo-600 whitespace-nowrap">Datalist</a>
-            <a href="#static"         class="hover:text-indigo-600 whitespace-nowrap">Static Data</a>
-            <a href="#remote"         class="hover:text-indigo-600 whitespace-nowrap">Remote</a>
-            <a href="#multiple"       class="hover:text-indigo-600 whitespace-nowrap">Multiple</a>
-            <a href="#value-prop"     class="hover:text-indigo-600 whitespace-nowrap">valueProperty</a>
-            <a href="#text-prop"      class="hover:text-indigo-600 whitespace-nowrap">textProperty</a>
-            <a href="#groupby"        class="hover:text-indigo-600 whitespace-nowrap">groupBy</a>
-            <a href="#search-opts"    class="hover:text-indigo-600 whitespace-nowrap">Search Options</a>
-            <a href="#multi-opts"     class="hover:text-indigo-600 whitespace-nowrap">Multiple Options</a>
-            <a href="#new-item"       class="hover:text-indigo-600 whitespace-nowrap">Add New Item</a>
-            <a href="#relatives"      class="hover:text-indigo-600 whitespace-nowrap">Relatives</a>
-            <a href="#programmatic"   class="hover:text-indigo-600 whitespace-nowrap">Programmatic API</a>
-            <a href="#events-log"     class="hover:text-indigo-600 whitespace-nowrap">Events</a>
+        <div class="hidden md:flex items-center">
+            <div class="nav-drop">
+                <button class="nav-drop-btn">Data Sources <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 4L5 6.5L7.5 4"/></svg></button>
+                <div class="nav-drop-menu">
+                    <a href="#datalist">Datalist</a>
+                    <a href="#static">Static Data</a>
+                    <a href="#remote">Remote URL</a>
+                </div>
+            </div>
+            <div class="nav-drop">
+                <button class="nav-drop-btn">Display <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 4L5 6.5L7.5 4"/></svg></button>
+                <div class="nav-drop-menu">
+                    <a href="#value-prop">valueProperty</a>
+                    <a href="#text-prop">textProperty</a>
+                    <a href="#groupby">groupBy</a>
+                    <a href="#search-opts">Search Options</a>
+                </div>
+            </div>
+            <div class="nav-drop">
+                <button class="nav-drop-btn">Values <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 4L5 6.5L7.5 4"/></svg></button>
+                <div class="nav-drop-menu">
+                    <a href="#multiple">Multiple</a>
+                    <a href="#new-item">Add New Item</a>
+                    <a href="#disabled">Disabled &amp; Readonly</a>
+                    <a href="#advanced">Custom Separator</a>
+                </div>
+            </div>
+            <div class="nav-drop">
+                <button class="nav-drop-btn">Advanced <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 4L5 6.5L7.5 4"/></svg></button>
+                <div class="nav-drop-menu">
+                    <a href="#relatives">Relatives</a>
+                    <a href="#programmatic">Programmatic API</a>
+                    <a href="#events-log">Events Log</a>
+                </div>
+            </div>
         </div>
-        <a href="index.html" class="text-sm text-indigo-600 font-semibold ml-4">Docs</a>
+        <div class="flex items-center gap-4">
+            <a href="https://github.com/sergiodlopes/flexdatalist" target="_blank" rel="noopener"
+               class="text-gray-400 hover:text-gray-700 transition-colors" title="GitHub">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            </a>
+            <a href="index.html" class="text-sm text-indigo-600 font-semibold">Docs</a>
+        </div>
     </div>
 </nav>
 
@@ -932,8 +986,18 @@ fd.setOption('minLength', 0)     // show all on focus now</div>
 </main>
 
 <!-- ===== FOOTER ===== -->
-<footer class="border-t border-gray-200 py-6 mt-10 text-center text-sm text-gray-500">
-    <a href="index.html" class="text-indigo-600 hover:underline">← Back to Documentation</a>
+<footer class="border-t border-gray-200 py-6 mt-10">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-gray-500">
+        <div class="flex items-center gap-3">
+            <a href="index.html" class="text-indigo-600 hover:underline">← Back to Documentation</a>
+            <span class="text-gray-300">·</span>
+            <span>© 2026 Sérgio Dinis Lopes · MIT License</span>
+        </div>
+        <a href="https://github.com/sergiodlopes/flexdatalist" target="_blank" rel="noopener" class="flex items-center gap-1.5 text-gray-400 hover:text-gray-700 transition-colors">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            GitHub
+        </a>
+    </div>
 </footer>
 
 <!-- shared button styles -->

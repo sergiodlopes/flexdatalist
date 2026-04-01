@@ -6,6 +6,8 @@
  *
  * Compatible CSS: use flexdatalist.css (class names are identical to v2).
  *
+ * @author Sergio Dinis Lopes <flexdatalist@sergiodinislopes.pt>
+ * @copyright 2016-2026 Sergio Dinis Lopes
  * @version 3.1.0
  * @license MIT
  *
