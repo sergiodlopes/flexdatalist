@@ -230,6 +230,11 @@ class Flexdatalist {
             throw new TypeError('Flexdatalist: first argument must be an HTMLElement.');
         }
 
+        if (el.classList.contains('flexdatalist-set')) {
+            console.warn('Flexdatalist: element already has an instance. This might cause issues.', el);
+            return;
+        }
+
         // Destroy any existing instance on this element.
         Flexdatalist.getInstance(el)?.destroy();
 
@@ -1166,14 +1171,22 @@ class Flexdatalist {
         cb = cb ?? (() => {});
 
         const vStr = this._toStr(values);
-        if (!vStr.length && !this._value.length) { cb(values); return; }
+        if (!vStr.length && !this._value.length) {
+            cb(values);
+            return;
+        }
 
         values = this._toObj(values);
 
         if (!this._isEmpty(values) && !this._isEmpty(vProps) && vProps !== '*') {
-            if (typeof vProps === 'string') vProps = vProps.split(',');
-            if (!this._isObj(values))        values = values.split(',');
-            else if (!Array.isArray(values)) values = [values];
+            if (typeof vProps === 'string') {
+                vProps = vProps.split(',');
+            }
+            if (!this._isObj(values)) {
+                values = values.split(',');
+            } else if (!Array.isArray(values)) {
+                values = [values];
+            }
 
             this._dataLoad(data => {
                 for (let vi = 0; vi < values.length; vi++) {
@@ -1181,13 +1194,19 @@ class Flexdatalist {
                     for (const item of data) {
                         for (const prop of vProps) {
                             const cmp = this._prop(v, prop) ?? v;
-                            if (this._prop(item, prop) === undefined) continue;
-                            if (String(cmp) !== String(item[prop])) continue;
+                            if (this._prop(item, prop) === undefined) {
+                                continue;
+                            }
+                            if (String(cmp) !== String(item[prop])) {
+                                continue;
+                            }
                             values[vi] = item;
                         }
                     }
                 }
-                if (values.length) this._extractValue(values, true);
+                if (values.length) {
+                    this._extractValue(values, init);
+                }
                 cb(values);
             }, values);
             return;
@@ -1203,23 +1222,29 @@ class Flexdatalist {
      *
      * @private
      * @param {string|Array|Object} values
-     * @param {boolean}             [init]  Suppress events when true.
+     * @param {boolean} [init]  Suppress events when true.
      */
     _extractValue(values, init) {
-        if (!init) this._dispatch('before:flexdatalist.value', values);
+        if (!init) {
+            this._dispatch('before:flexdatalist.value', values);
+        }
 
         const result = [];
         if (Array.isArray(values)) {
-            for (const v of values) result.push(this._extractOne(v));
+            for (const v of values) {
+                result.push(this._extractOne(v));
+            }
         } else {
             result.push(this._extractOne(values));
         }
 
-        if (!init) {
-            this._dispatch('after:flexdatalist.value', result);
-            this._dispatch('change:flexdatalist', this._changePayload());
-            this._dispatch('change');
+        if (init === false) {
+            return;
         }
+
+        this._dispatch('after:flexdatalist.value', result);
+        this._dispatch('change:flexdatalist', this._changePayload());
+        this._dispatch('change');
     }
 
     /**
@@ -1336,10 +1361,18 @@ class Flexdatalist {
     _toObj(val) {
         if (typeof val === 'object') return val;
         const o = this._options;
-        if (this._isEmpty(val)) return o.multiple ? [] : (this._isJSON() ? {} : '');
-        if (this._isCSV())      return val.toString().split(o.valuesSeparator).map(v => v.trim());
-        if ((this._isMixed() || this._isJSON()) && /^[\[{]/.test(val)) return JSON.parse(val);
-        if (typeof val === 'number') return val.toString();
+        if (this._isEmpty(val)) {
+            return o.multiple ? [] : (this._isJSON() ? {} : '');
+        }
+        if (this._isCSV()) {
+            return val.toString().split(o.valuesSeparator).map(v => v.trim());
+        }
+        if ((this._isMixed() || this._isJSON()) && /^[\[{]/.test(val)) {
+            return JSON.parse(val);
+        }
+        if (typeof val === 'number') {
+            return val.toString();
+        }
         return val;
     }
 
@@ -1351,12 +1384,22 @@ class Flexdatalist {
      * @returns {string}
      */
     _toStr(val) {
-        if (typeof val === 'string') return val.trim();
+        if (typeof val === 'string') {
+            return val.trim();
+        }
         const o = this._options;
-        if (this._isEmpty(val))          return '';
-        if (typeof val === 'number')     return val.toString();
-        if (this._isCSV())               return val.join(o.valuesSeparator);
-        if (this._isJSON() || this._isMixed()) return JSON.stringify(val);
+        if (this._isEmpty(val)) {
+            return '';
+        }
+        if (typeof val === 'number') {
+            return val.toString();
+        }
+        if (this._isCSV()) {
+            return val.join(o.valuesSeparator);
+        }
+        if (this._isJSON() || this._isMixed()) {
+            return JSON.stringify(val);
+        }
         return '';
     }
 
@@ -1370,8 +1413,12 @@ class Flexdatalist {
      */
     _isJSON(str) {
         if (str !== undefined) {
-            if (this._isObj(str)) str = JSON.stringify(str);
-            if (typeof str !== 'string') return false;
+            if (this._isObj(str)) {
+                str = JSON.stringify(str);
+            }
+            if (typeof str !== 'string') {
+                return false;
+            }
             return str[0] === '{' || str.startsWith('[{');
         }
         const vp = this._options.valueProperty;
@@ -1452,9 +1499,13 @@ class Flexdatalist {
      */
     _multipleToggle(liOrVal) {
         const o = this._options;
-        if (!o.toggleSelected) return;
+        if (!o.toggleSelected) {
+            return;
+        }
         const li = liOrVal instanceof HTMLElement ? liOrVal : this._multipleFindLi(String(liOrVal));
-        if (!li) return;
+        if (!li) {
+            return;
+        }
 
         const action = li.classList.contains('disabled') ? 'enable' : 'disable';
         const togglePayload = { value: li.dataset.value, text: li.dataset.text, action };
@@ -1481,7 +1532,9 @@ class Flexdatalist {
      */
     _multipleRemove(val) {
         const li = this._multipleFindLi(val);
-        if (!li) return;
+        if (!li) {
+            return;
+        }
 
         const all = [...this._multipleEl.querySelectorAll('li:not(.input-container)')];
         const idx = all.indexOf(li);
@@ -1507,7 +1560,9 @@ class Flexdatalist {
      * @private
      */
     _multipleRemoveAll() {
-        if (!this._multipleEl) return;
+        if (!this._multipleEl) {
+            return;
+        }
         this._dispatch('before:flexdatalist.remove.all', this.getValue());
         this._multipleEl.querySelectorAll('li:not(.input-container)').forEach(l => l.remove());
         this._value = '';
