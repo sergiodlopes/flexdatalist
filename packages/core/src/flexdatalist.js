@@ -254,6 +254,9 @@ class Flexdatalist {
         /** @type {boolean} Prevent fetching while the user is navigating away. */
         this._fetchDisabled = false;
 
+        /** @type {{ url: string, data?: Object, success: Function }|null} Request that arrived while one was already in-flight; replayed after the current fetch settles. */
+        this._pendingRequest = null;
+
         /** @type {number|null} setTimeout handle for debounced search. */
         this._searchTimeout = null;
 
@@ -1693,7 +1696,10 @@ class Flexdatalist {
      */
     _dataFetch(callback, load) {
         const o = this._options;
-        if (this._isEmpty(o.url)) { callback(null); return; }
+        if (this._isEmpty(o.url)) {
+            callback(null);
+            return;
+        }
 
         const keyword = this._alias.value;
         const relatives = this._relativesData();
@@ -1701,14 +1707,19 @@ class Flexdatalist {
             { relative: relatives, load, keyword, contain: o.searchContain }, o.url
         );
         const cached = this._cacheRead(cacheKey, true);
-        if (cached) { callback(cached); return; }
+        if (cached) {
+            callback(cached);
+            return;
+        }
 
         const params = typeof o.params === 'function'
             ? o.params.call(this._hiddenInput, keyword)
             : { ...o.params };
 
         const data = { ...relatives, ...params, selected: this._value, original: o.originalValue };
-        if (load !== undefined) data.load = load;
+        if (load !== undefined){
+            data.load = load;
+        }
         data[o.keywordParamName] = keyword;
         data[o.searchContainParamName] = o.searchContain;
 
@@ -1730,7 +1741,14 @@ class Flexdatalist {
     _request(settings) {
         const o = this._options;
         const el = this._hiddenInput;
-        if (el.classList.contains('flexdatalist-loading')) return;
+        if (el.classList.contains('flexdatalist-loading')) {
+            // A fetch is already in-flight. Save this request as pending so its
+            // callback is not silently dropped (e.g. init value-load vs. a fast
+            // server that triggers a second _dataLoad before the first resolves).
+            this._pendingRequest = settings;
+            return;
+        }
+        this._pendingRequest = null;
         el.classList.add('flexdatalist-loading');
 
         let url = settings.url;
@@ -1753,7 +1771,15 @@ class Flexdatalist {
             .then(r => r.json())
             .then(data => settings.success(this._extractRemoteData(data)))
             .catch(err => { if (o.debug) console.error('Flexdatalist fetch error:', err); })
-            .finally(() => el.classList.remove('flexdatalist-loading'));
+            .finally(() => {
+                el.classList.remove('flexdatalist-loading');
+                // If a request arrived while this one was in-flight, run it now.
+                if (this._pendingRequest) {
+                    const pending = this._pendingRequest;
+                    this._pendingRequest = null;
+                    this._request(pending);
+                }
+            });
     }
 
     /**
