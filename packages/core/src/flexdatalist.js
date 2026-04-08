@@ -8,7 +8,7 @@
  *
  * @author Sergio Dinis Lopes <flexdatalist@sergiodinislopes.pt>
  * @copyright 2016-2026 Sergio Dinis Lopes
- * @version 3.1.0
+ * @version 3.1.1
  * @license MIT
  *
  * Basic usage

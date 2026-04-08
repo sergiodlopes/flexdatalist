@@ -1,7 +1,7 @@
 {
   "name": "flexdatalist-svelte",
   "description": "Svelte adapter for the Flexdatalist autocomplete/tag input",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "type": "module",
   "main": "dist/flexdatalist-svelte.es.js",
   "module": "dist/flexdatalist-svelte.es.js",

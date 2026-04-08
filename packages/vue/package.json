@@ -1,7 +1,7 @@
 {
   "name": "flexdatalist-vue",
   "description": "Vue 3 adapter for the Flexdatalist autocomplete/tag input",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "type": "module",
   "main": "dist/flexdatalist-vue.es.js",
   "module": "dist/flexdatalist-vue.es.js",
