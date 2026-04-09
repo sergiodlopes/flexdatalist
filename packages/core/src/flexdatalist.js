@@ -855,7 +855,7 @@ class Flexdatalist {
         alias.addEventListener('focusout', () => {
             this._multipleEl?.classList.remove('focus');
             this._actClearText();
-            this._actClearValue();
+            if (!this._value.length) this._actClearValue();
         });
 
         // Show all options on click only when minLength is 0 (explicit opt-in).
