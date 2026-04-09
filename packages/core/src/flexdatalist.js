@@ -855,7 +855,7 @@ class Flexdatalist {
         alias.addEventListener('focusout', () => {
             this._multipleEl?.classList.remove('focus');
             this._actClearText();
-            if (!this._value.length) this._actClearValue();
+            this._actClearValue();
         });
 
         // Show all options on click only when minLength is 0 (explicit opt-in).
@@ -1162,7 +1162,7 @@ class Flexdatalist {
      */
     _actClearText() {
         const o = this._options;
-        if (!o.multiple && o.selectionRequired && !this._value.length) {
+        if (!o.multiple && o.selectionRequired && !this._hiddenInput.value.length) {
             this._alias.value = '';
         }
     }
@@ -1321,7 +1321,9 @@ class Flexdatalist {
      * @returns {string}
      */
     _getText(item) {
-        if (!this._isObj(item)) return item;
+        if (!this._isObj(item)) {
+            return item;
+        }
         const o = this._options;
         let text = this._prop(item, o.searchIn[0]);
         if (this._prop(item, o.textProperty) !== undefined) {
@@ -1342,7 +1344,9 @@ class Flexdatalist {
      * @returns {string}
      */
     _getVal(item) {
-        if (!this._isObj(item)) return item;
+        if (!this._isObj(item)) {
+            return item;
+        }
         const o  = this._options;
         const vp = o.valueProperty;
 
@@ -1356,8 +1360,12 @@ class Flexdatalist {
             }
             return this._toStr(clone);
         }
-        if (this._prop(item, vp) !== undefined)           return this._prop(item, vp);
-        if (this._prop(item, o.searchIn[0]) !== undefined) return this._prop(item, o.searchIn[0]);
+        if (this._prop(item, vp) !== undefined) {
+            return this._prop(item, vp);
+        }
+        if (this._prop(item, o.searchIn[0]) !== undefined) {
+            return this._prop(item, o.searchIn[0]);
+        }
         return null;
     }
 
@@ -1396,7 +1404,9 @@ class Flexdatalist {
      * @returns {string|Array|Object}
      */
     _toObj(val) {
-        if (typeof val === 'object') return val;
+        if (typeof val === 'object') {
+            return val;
+        }
         const o = this._options;
         if (this._isEmpty(val)) {
             return o.multiple ? [] : (this._isJSON() ? {} : '');
