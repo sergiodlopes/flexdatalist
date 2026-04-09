@@ -1867,11 +1867,11 @@ class Flexdatalist {
             method: o.requestType.toUpperCase(),
             headers: { ...o.requestHeaders ?? {} }
         };
-        if (typeof fetchOpts.headers.Accept === undefined) {
+        if (typeof fetchOpts.headers['Accept'] === 'undefined') {
             fetchOpts.headers['Accept'] = 'application/json';
         }
-        if (typeof fetchOpts.headers['fld-value'] === undefined) {
-            fetchOpts.headers['fld-value'] = this._value;
+        if (typeof fetchOpts.headers['Flexdatalist-request'] === 'undefined') {
+            fetchOpts.headers['Flexdatalist-request'] = 'true';
         }
 
         if (o.requestType.toLowerCase() === 'post') {
@@ -1885,6 +1885,8 @@ class Flexdatalist {
         } else if (settings.data) {
             url += (url.includes('?') ? '&' : '?') + new URLSearchParams(settings.data).toString();
         }
+
+        console.log('fetchOpts', fetchOpts);
 
         fetch(url, fetchOpts)
             .then(r => r.json())
