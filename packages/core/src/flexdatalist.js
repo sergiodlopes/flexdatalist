@@ -534,7 +534,9 @@ class Flexdatalist {
         }
 
         const texts = [...this._texts];
-        if (format === 'array') return texts;
+        if (format === 'array') {
+            return texts;
+        }
 
         const sep = format === 'string' ? this._options.valuesSeparator : format;
         return texts.join(sep);
@@ -572,7 +574,9 @@ class Flexdatalist {
      * @returns {this|boolean} `this` when setting, current state when getting.
      */
     readonly(state) {
-        if (state === undefined) return !!this._options.readonly;
+        if (state === undefined) {
+            return !!this._options.readonly;
+        }
         this._applyReadonly(state);
         return this;
     }
@@ -1162,7 +1166,7 @@ class Flexdatalist {
      */
     _actClearText() {
         const o = this._options;
-        if (!o.multiple && o.selectionRequired && !this._hiddenInput.value.length) {
+        if (!o.multiple && o.selectionRequired && !this._value.length) {
             this._alias.value = '';
         }
     }
