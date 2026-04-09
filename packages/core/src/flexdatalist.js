@@ -1855,7 +1855,9 @@ class Flexdatalist {
 
         let url = settings.url;
         const fetchOpts = { method: o.requestType.toUpperCase() };
-        if (o.requestHeaders) fetchOpts.headers = { ...o.requestHeaders };
+        if (o.requestHeaders) {
+            fetchOpts.headers = { ...o.requestHeaders };
+        }
 
         if (o.requestType.toLowerCase() === 'post') {
             if (o.requestContentType === 'json') {
@@ -1872,7 +1874,11 @@ class Flexdatalist {
         fetch(url, fetchOpts)
             .then(r => r.json())
             .then(data => settings.success(this._extractRemoteData(data)))
-            .catch(err => { if (o.debug) console.error('Flexdatalist fetch error:', err); })
+            .catch(err => {
+                if (o.debug) {
+                    console.error('Flexdatalist fetch error:', err);
+                }
+            })
             .finally(() => {
                 el.classList.remove('flexdatalist-loading');
                 // If a request arrived while this one was in-flight, run it now.
@@ -1895,8 +1901,12 @@ class Flexdatalist {
     _extractRemoteData(data) {
         const o = this._options;
         let d = this._prop(data, o.resultsProperty) ?? data;
-        if (typeof d === 'string' && d.startsWith('[{')) d = JSON.parse(d);
-        if (d?.options) Object.assign(this._options, d.options);
+        if (typeof d === 'string' && d.startsWith('[{')) {
+            d = JSON.parse(d);
+        }
+        if (d?.options) {
+            Object.assign(this._options, d.options);
+        }
         return this._isObj(d) ? d : [];
     }
 
@@ -1908,7 +1918,9 @@ class Flexdatalist {
      */
     _relativesData() {
         const rels = this._options.relatives;
-        if (!rels?.length) return {};
+        if (!rels?.length) {
+            return {};
+        }
         const out = { relatives: {} };
         for (const rel of rels) {
             const name = (rel.name ?? '')
@@ -1957,10 +1969,16 @@ class Flexdatalist {
      */
     _searchGet(keywords, data, callback) {
         const o = this._options;
-        if (o.searchDisabled) { callback(data); return; }
+        if (o.searchDisabled) {
+            callback(data);
+            return;
+        }
 
         const cached = this._cacheRead(keywords);
-        if (cached) { callback(cached); return; }
+        if (cached) {
+            callback(cached);
+            return;
+        }
 
         this._dispatch('before:flexdatalist.search', { keywords, data });
         let matches = data;
@@ -1969,9 +1987,13 @@ class Flexdatalist {
             matches = [];
             const words = this._searchSplit(keywords);
             for (const item of data) {
-                if (this._isDup(this._getText(item))) continue;
+                if (this._isDup(this._getText(item))) {
+                    continue;
+                }
                 const m = this._searchMatch(item, words);
-                if (m) matches.push(m);
+                if (m) {
+                    matches.push(m);
+                }
             }
         }
 
@@ -1997,7 +2019,9 @@ class Flexdatalist {
 
         for (const prop of o.searchIn) {
             const raw = this._prop(item, prop);
-            if (!raw) continue;
+            if (!raw) {
+                continue;
+            }
             const text = String(raw);
             let hl = text;
             const parts = this._searchSplit(text);
@@ -2008,10 +2032,14 @@ class Flexdatalist {
                     hl = this._hlMark(kw, hl);
                 }
             }
-            if (hl !== text) out[prop + '_highlight'] = this._hlWrap(hl);
+            if (hl !== text) {
+                out[prop + '_highlight'] = this._hlWrap(hl);
+            }
         }
 
-        if (!found.length || (o.searchByWord && found.length < keywords.length - 1)) return false;
+        if (!found.length || (o.searchByWord && found.length < keywords.length - 1)) {
+            return false;
+        }
         return out;
     }
 
@@ -2024,7 +2052,9 @@ class Flexdatalist {
      * @returns {string} Text with `|:|…|::|` sentinel markers.
      */
     _hlMark(kw, text) {
-        if (!text) return text;
+        if (!text) {
+            return text;
+        }
         const safe = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         return text.replace(new RegExp(safe, this._options.searchContain ? 'igu' : 'iu'), '|:|$&|::|');
     }
@@ -2054,8 +2084,12 @@ class Flexdatalist {
         const nkw = this._normalize(kw);
         for (const p of parts) {
             const np = this._normalize(p);
-            if (o.searchEqual)   return np === nkw;
-            if (o.searchContain ? np.includes(nkw) : np.startsWith(nkw)) return true;
+            if (o.searchEqual) {
+                return np === nkw;
+            }
+            if (o.searchContain ? np.includes(nkw) : np.startsWith(nkw)) {
+                return true;
+            }
         }
         return false;
     }
@@ -2068,11 +2102,15 @@ class Flexdatalist {
      * @returns {string[]}
      */
     _searchSplit(kws) {
-        if (typeof kws === 'string') kws = [kws.trim()];
+        if (typeof kws === 'string') {
+            kws = [kws.trim()];
+        }
         if (this._options.searchByWord) {
             const extra = [];
             for (const kw of kws) {
-                if (kw.includes(' ')) extra.push(...kw.split(' '));
+                if (kw.includes(' ')) {
+                    extra.push(...kw.split(' '));
+                }
             }
             kws = [...kws, ...extra];
         }
@@ -2088,9 +2126,13 @@ class Flexdatalist {
      * @returns {string}
      */
     _normalize(str) {
-        if (typeof str !== 'string') return str;
+        if (typeof str !== 'string') {
+            return str;
+        }
         const fn = this._options.normalizeString;
-        if (typeof fn === 'function') str = fn(str);
+        if (typeof fn === 'function') {
+            str = fn(str);
+        }
         return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
     }
 
@@ -2106,11 +2148,16 @@ class Flexdatalist {
      */
     _resultsShow(results) {
         this._resultsRemove(true);
-        if (!results) return;
-        if (!results.length) { this._resultsEmpty(this._options.noResultsText); return; }
+        if (!results) {
+            return;
+        }
+        if (!results.length) {
+            this._resultsEmpty(this._options.noResultsText);
+            return;
+        }
 
         const ul = this._resultsContainer();
-        const o  = this._options;
+        const o = this._options;
 
         if (!o.groupBy) {
             this._renderItems(results, ul);
@@ -2158,7 +2205,9 @@ class Flexdatalist {
      * @param {string} text  Message template (may contain `{keyword}`).
      */
     _resultsEmpty(text) {
-        if (this._isEmpty(text)) return;
+        if (this._isEmpty(text)) {
+            return;
+        }
         const container = this._resultsContainer();
         const o  = this._options;
         const kw = this._alias.value;
@@ -2223,7 +2272,7 @@ class Flexdatalist {
         for (const vp of o.visibleProperties) {
             let el;
             if (vp.includes('{')) {
-                const str    = this._replacePlaceholders(item, vp, '');
+                const str = this._replacePlaceholders(item, vp, '');
                 const parsed = this._parsePlaceholders(vp);
                 el = document.createElement('span');
                 el.className = 'prop-' + (Object.values(parsed ?? {}).join('-') || vp);
@@ -2263,12 +2312,14 @@ class Flexdatalist {
             }
             el.setAttribute('role', 'listbox');
             el._fdTarget = this._multipleEl ?? this._alias;
-            el._fdInput  = this._hiddenInput;
+            el._fdInput = this._hiddenInput;
             return el;
         }
 
         let ul = document.querySelector('ul.flexdatalist-results');
-        if (ul) return ul;
+        if (ul) {
+            return ul;
+        }
 
         const target = this._multipleEl ?? this._alias;
         const cs = getComputedStyle(target);
@@ -2278,12 +2329,12 @@ class Flexdatalist {
         ul.className = 'flexdatalist-results';
         ul.id = this._alias.id + '-results';
         ul.setAttribute('role', 'listbox');
-        ul.style.borderTopLeftRadius     = cs.borderTopLeftRadius;
-        ul.style.borderTopRightRadius    = cs.borderTopRightRadius;
-        ul.style.borderBottomLeftRadius  = cs.borderBottomLeftRadius;
+        ul.style.borderTopLeftRadius = cs.borderTopLeftRadius;
+        ul.style.borderTopRightRadius = cs.borderTopRightRadius;
+        ul.style.borderBottomLeftRadius = cs.borderBottomLeftRadius;
         ul.style.borderBottomRightRadius = cs.borderBottomRightRadius;
         ul._fdTarget = target;
-        ul._fdInput  = this._hiddenInput;
+        ul._fdInput = this._hiddenInput;
 
         parent.appendChild(ul);
         this._position(ul, target);
@@ -2298,7 +2349,7 @@ class Flexdatalist {
      * @returns {Object.<string, Object[]>} Map of groupName → items.
      */
     _groupResults(results) {
-        const gp  = this._options.groupBy;
+        const gp = this._options.groupBy;
         const out = {};
         for (const item of results) {
             const key = this._prop(item, gp);
@@ -2324,7 +2375,9 @@ class Flexdatalist {
      */
     _hlProp(item, property, fallback = '') {
         const hl = this._prop(item, property + '_highlight');
-        if (hl !== undefined) return hl;
+        if (hl !== undefined) {
+            return hl;
+        }
         return String(this._prop(item, property) ?? fallback);
     }
 
@@ -2335,7 +2388,9 @@ class Flexdatalist {
      */
     _resultsLoadingStart() {
         const o = this._options;
-        if (!o.resultsLoader || document.querySelector('.flexdatalist-fetching-results')) return;
+        if (!o.resultsLoader || document.querySelector('.flexdatalist-fetching-results')) {
+            return;
+        }
         this._resultsRemove();
         const ul = this._resultsContainer();
         ul.classList.replace('flexdatalist-results', 'flexdatalist-fetching-results');
@@ -2442,16 +2497,20 @@ class Flexdatalist {
      * @returns {boolean} Current disabled state.
      */
     _applyDisabled(disabled) {
-        if (disabled == null) return this._options.disabled;
-        this._hiddenInput.disabled    = disabled;
+        if (disabled == null) {
+            return this._options.disabled;
+        }
+        this._hiddenInput.disabled = disabled;
         this._alias.disabled = disabled;
 
         if (this._multipleEl) {
             const btns = this._multipleEl.querySelectorAll('li .fdl-remove');
-            const ic   = this._multipleEl.querySelector('li.input-container');
+            const ic = this._multipleEl.querySelector('li.input-container');
             this._multipleEl.classList.toggle('disabled', disabled);
             btns.forEach(b => { b.style.display = disabled ? 'none' : ''; });
-            if (ic) ic.style.display = disabled ? 'none' : '';
+            if (ic) {
+                ic.style.display = disabled ? 'none' : '';
+            }
         }
 
         this._options.disabled = disabled;
@@ -2478,8 +2537,12 @@ class Flexdatalist {
             const btns = this._multipleEl.querySelectorAll('li .fdl-remove');
             const ic = this._multipleEl.querySelector('li.input-container');
             this._multipleEl.classList.toggle('disabled', ro);
-            btns.forEach(b => { b.style.display = ro ? 'none' : ''; });
-            if (ic) ic.style.display = ro ? 'none' : '';
+            btns.forEach(b => {
+                b.style.display = ro ? 'none' : '';
+            });
+            if (ic) {
+                ic.style.display = ro ? 'none' : '';
+            }
         }
 
         this._options.readonly = ro;
@@ -2512,7 +2575,9 @@ class Flexdatalist {
      * @param {boolean}       [global]    Use the shared global key prefix.
      */
     _cacheWrite(key, value, lifetime, global) {
-        if (!this._cacheSupported()) return;
+        if (!this._cacheSupported()) {
+            return;
+        }
         localStorage.setItem(this._cacheKeyGen(key, undefined, global), JSON.stringify({
             value, timestamp: Math.round(Date.now() / 1000), lifetime: lifetime || false,
         }));
@@ -2527,10 +2592,14 @@ class Flexdatalist {
      * @returns {*|null}
      */
     _cacheRead(key, global) {
-        if (!this._cacheSupported()) return null;
-        const k   = this._cacheKeyGen(key, undefined, global);
+        if (!this._cacheSupported()) {
+            return null;
+        }
+        const k = this._cacheKeyGen(key, undefined, global);
         const raw = localStorage.getItem(k);
-        if (!raw) return null;
+        if (!raw) {
+            return null;
+        }
         const obj = JSON.parse(raw);
         if (obj.lifetime && (Math.round(Date.now() / 1000) - obj.timestamp) >= obj.lifetime) {
             localStorage.removeItem(k);
@@ -2545,9 +2614,13 @@ class Flexdatalist {
      * @private
      */
     _cacheGC() {
-        if (!this._cacheSupported()) return;
+        if (!this._cacheSupported()) {
+            return;
+        }
         for (const key of Object.keys(localStorage)) {
-            if (!key.startsWith('fdl-')) continue;
+            if (!key.startsWith('fdl-')) {
+                continue;
+            }
             const obj = JSON.parse(localStorage.getItem(key));
             if (obj?.lifetime && (Math.round(Date.now() / 1000) - obj.timestamp) >= obj.lifetime) {
                 localStorage.removeItem(key);
@@ -2565,7 +2638,9 @@ class Flexdatalist {
      * @returns {string}
      */
     _cacheKeyGen(str, seed, global) {
-        if (typeof str === 'object') str = JSON.stringify(str);
+        if (typeof str === 'object') {
+            str = JSON.stringify(str);
+        }
         let h = seed ?? 0x811c9dc5;
         for (let i = 0; i < str.length; i++) {
             h ^= str.charCodeAt(i);
@@ -2587,7 +2662,9 @@ class Flexdatalist {
      * @returns {*} Property value, or `undefined` if not found.
      */
     _prop(obj, path) {
-        if (!obj || typeof path !== 'string') return undefined;
+        if (!obj || typeof path !== 'string') {
+            return undefined;
+        }
         return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
     }
 
@@ -2606,11 +2683,21 @@ class Flexdatalist {
      * @returns {boolean}
      */
     _isEmpty(v) {
-        if (v === undefined || v === null) return true;
-        if (v === true)                    return false;
-        if (typeof v === 'string')         return v.trim() === '';
-        if (Array.isArray(v))              return v.length === 0;
-        if (this._isObj(v))               return Object.keys(v).length === 0;
+        if (v === undefined || v === null) {
+            return true;
+        }
+        if (v === true) {
+            return false;
+        }
+        if (typeof v === 'string') {
+            return v.trim() === '';
+        }
+        if (Array.isArray(v)) {
+            return v.length === 0;
+        }
+        if (this._isObj(v)) {
+            return Object.keys(v).length === 0;
+        }
         return false;
     }
 
@@ -2640,12 +2727,18 @@ class Flexdatalist {
      * @returns {string|*}
      */
     _replacePlaceholders(item, pattern, fallback) {
-        if (!this._isObj(item) || typeof pattern !== 'string') return fallback;
+        if (!this._isObj(item) || typeof pattern !== 'string') {
+            return fallback;
+        }
         const props = this._parsePlaceholders(pattern);
-        if (!props) return fallback;
+        if (!props) {
+            return fallback;
+        }
         for (const [token, key] of Object.entries(props)) {
             const v = this._prop(item, key);
-            if (v !== undefined) pattern = pattern.replace(token, v);
+            if (v !== undefined) {
+                pattern = pattern.replace(token, v);
+            }
         }
         return pattern;
     }
@@ -2658,9 +2751,13 @@ class Flexdatalist {
      * @returns {Object.<string,string>|false}
      */
     _parsePlaceholders(pattern) {
-        if (!pattern) return false;
+        if (!pattern) {
+            return false;
+        }
         const matches = pattern.match(/\{.+?\}/g);
-        if (!matches) return false;
+        if (!matches) {
+            return false;
+        }
         return Object.fromEntries(matches.map(s => [s, s.slice(1, -1)]));
     }
 
@@ -2691,4 +2788,5 @@ class Flexdatalist {
     _dispatch(name, detail = null) {
         this._hiddenInput.dispatchEvent(new CustomEvent(name, { detail, bubbles: true }));
     }
+
 }
