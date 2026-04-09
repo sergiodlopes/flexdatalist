@@ -1006,8 +1006,13 @@ class Flexdatalist {
         this._actClearValue();
         this._actRemoveResults();
 
-        if (!this._alias.value.length) this._actClearValue();
-        if (ignoreEnter) { e.preventDefault(); return false; }
+        if (!this._alias.value.length) {
+            this._actClearValue();
+        }
+        if (ignoreEnter) {
+            e.preventDefault();
+            return false;
+        }
     }
 
     /**
@@ -1166,7 +1171,7 @@ class Flexdatalist {
      */
     _actClearText() {
         const o = this._options;
-        if (!o.multiple && o.selectionRequired && !this._value.length) {
+        if (!o.multiple && o.selectionRequired && !String(this._value).length) {
             this._alias.value = '';
         }
     }
@@ -1858,9 +1863,15 @@ class Flexdatalist {
         el.classList.add('flexdatalist-loading');
 
         let url = settings.url;
-        const fetchOpts = { method: o.requestType.toUpperCase() };
-        if (o.requestHeaders) {
-            fetchOpts.headers = { ...o.requestHeaders };
+        const fetchOpts = {
+            method: o.requestType.toUpperCase(),
+            headers: { ...o.requestHeaders ?? {} }
+        };
+        if (typeof fetchOpts.headers.Accept === undefined) {
+            fetchOpts.headers['Accept'] = 'application/json';
+        }
+        if (typeof fetchOpts.headers['fld-value'] === undefined) {
+            fetchOpts.headers['fld-value'] = this._value;
         }
 
         if (o.requestType.toLowerCase() === 'post') {
