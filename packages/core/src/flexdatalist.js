@@ -2466,7 +2466,7 @@ class Flexdatalist {
 
         if (this._multipleEl) {
             const btns = this._multipleEl.querySelectorAll('li .fdl-remove');
-            const ic   = this._multipleEl.querySelector('li.input-container');
+            const ic = this._multipleEl.querySelector('li.input-container');
             this._multipleEl.classList.toggle('disabled', ro);
             btns.forEach(b => { b.style.display = ro ? 'none' : ''; });
             if (ic) ic.style.display = ro ? 'none' : '';
