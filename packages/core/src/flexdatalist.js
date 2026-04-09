@@ -158,6 +158,14 @@ class Flexdatalist {
         showAddNewItem: false,
         /** @type {string} Text of the "Add new item" option. `{keyword}` is replaced. */
         addNewItemText: 'No results found for "{keyword}". Click to add it.',
+        /**
+         * External element to render results into instead of the auto-created
+         * dropdown. When set, Flexdatalist will never create, position, or
+         * destroy the container — only fill and clear its children.
+         * Ideal for rendering results inside a dialog or custom panel.
+         * @type {HTMLElement|string|null}
+         */
+        resultsContainer: null,
         /** @type {boolean} Log warnings to the console. */
         debug: true,
     };
@@ -270,6 +278,17 @@ class Flexdatalist {
 
         /** @type {Object} Resolved options for this instance. */
         this._options = this._buildOptions(options);
+
+        /** @type {HTMLElement|null} User-provided results container (never created/destroyed by us). */
+        this._customContainer = null;
+        const rc = this._options.resultsContainer;
+        if (rc) {
+            this._customContainer = typeof rc === 'string' ? document.querySelector(rc) : rc;
+            if (!(this._customContainer instanceof HTMLElement)) {
+                throw new TypeError('Flexdatalist: resultsContainer must be an HTMLElement or valid CSS selector.');
+            }
+            this._customContainer._fdCustom = true;
+        }
 
         // @ts-ignore — TS false positive: static private access is valid inside the class body
         Flexdatalist.#instances.set(el, this);
@@ -677,6 +696,17 @@ class Flexdatalist {
         el.value = !clear && this._options?.originalValue ? this._options.originalValue : '';
 
         container?.remove();
+
+        if (this._customContainer) {
+            this._customContainer.replaceChildren();
+            this._customContainer.classList.remove('flexdatalist-results', 'flexdatalist-fetching-results');
+            this._customContainer.removeAttribute('role');
+            delete this._customContainer._fdTarget;
+            delete this._customContainer._fdInput;
+            delete this._customContainer._fdCustom;
+            this._customContainer = null;
+        }
+
         // @ts-ignore
         Flexdatalist.#instances.delete(el);
     }
@@ -853,10 +883,12 @@ class Flexdatalist {
         }
         this.#globalBound = true;
 
-        // Close results when clicking outside.
+        // Close results when clicking outside (skipped for custom containers).
         document.addEventListener('mouseup', e => {
-            const ul = document.querySelector('ul.flexdatalist-results');
-            if (!ul) return;
+            const ul = document.querySelector('.flexdatalist-results');
+            if (!ul || ul._fdCustom) {
+                return;
+            }
             const target = ul._fdTarget;
             if (target && target === document.activeElement) return;
             if (!ul.contains(e.target) && ul !== e.target) ul.remove();
@@ -864,20 +896,25 @@ class Flexdatalist {
 
         // Arrow key navigation + Enter/Escape.
         document.addEventListener('keydown', e => {
-            const ul = document.querySelector('ul.flexdatalist-results');
-            if (!ul) return;
+            const ul = document.querySelector('.flexdatalist-results');
+            if (!ul) {
+                return;
+            }
 
             const items = [...ul.querySelectorAll('li.item')];
-            if (!items.length) return;
+            if (!items.length) {
+                return;
+            }
 
             const key = e.key;
+            const custom = ul._fdCustom;
 
-            if (key === 'Escape') { ul.remove(); return; }
+            if (key === 'Escape') { if (!custom) ul.remove(); return; }
 
             if (key === 'Enter') {
                 const active = ul.querySelector('li.item.active');
-                e.preventDefault();
-                active ? active.click() : ul.remove();
+                if (active) { e.preventDefault(); active.click(); }
+                else if (!custom) { e.preventDefault(); ul.remove(); }
                 return;
             }
 
@@ -2201,12 +2238,25 @@ class Flexdatalist {
     }
 
     /**
-     * Return (creating if necessary) the `<ul class="flexdatalist-results">` container.
+     * Return (creating if necessary) the results container element.
+     * When `options.resultsContainer` is set, returns the user-provided
+     * element without creating or positioning anything.
      *
      * @private
-     * @returns {HTMLUListElement}
+     * @returns {HTMLElement}
      */
     _resultsContainer() {
+        if (this._customContainer) {
+            const el = this._customContainer;
+            if (!el.classList.contains('flexdatalist-results')) {
+                el.classList.add('flexdatalist-results');
+            }
+            el.setAttribute('role', 'listbox');
+            el._fdTarget = this._multipleEl ?? this._alias;
+            el._fdInput  = this._hiddenInput;
+            return el;
+        }
+
         let ul = document.querySelector('ul.flexdatalist-results');
         if (ul) return ul;
 
@@ -2289,24 +2339,38 @@ class Flexdatalist {
     }
 
     /**
-     * Remove the loading spinner `<ul>`.
+     * Remove the loading spinner.
+     * For a custom container the element is preserved — only children are cleared
+     * and the class is restored.
      *
      * @private
      */
     _resultsLoadingStop() {
-        document.querySelectorAll('ul.flexdatalist-fetching-results').forEach(el => el.remove());
+        if (this._customContainer) {
+            this._customContainer.replaceChildren();
+            this._customContainer.classList.remove('flexdatalist-fetching-results');
+            this._customContainer.classList.add('flexdatalist-results');
+        } else {
+            document.querySelectorAll('ul.flexdatalist-fetching-results').forEach(el => el.remove());
+        }
     }
 
     /**
      * Remove the results dropdown (or only its `<li>` children when `itemsOnly`).
+     * When a custom `resultsContainer` is set, only children are ever removed —
+     * the container itself is never destroyed.
      *
      * @private
      * @param {boolean} [itemsOnly=false]
      */
     _resultsRemove(itemsOnly = false) {
         this._dispatch('remove:flexdatalist.results');
-        document.querySelectorAll(itemsOnly ? 'ul.flexdatalist-results li' : 'ul.flexdatalist-results')
-            .forEach(el => el.remove());
+        if (this._customContainer) {
+            this._customContainer.replaceChildren();
+        } else {
+            document.querySelectorAll(itemsOnly ? 'ul.flexdatalist-results li' : 'ul.flexdatalist-results')
+                .forEach(el => el.remove());
+        }
         this._dispatch('removed:flexdatalist.results');
     }
 
@@ -2324,31 +2388,35 @@ class Flexdatalist {
      */
     _position(container, target) {
         container = container ?? document.querySelector('ul.flexdatalist-results');
-        if (!container) return;
+        if (!container || container._fdCustom) {
+            return;
+        }
         target = target ?? container._fdTarget;
-        if (!target) return;
+        if (!target) {
+            return;
+        }
 
-        const rect    = target.getBoundingClientRect();
+        const rect = target.getBoundingClientRect();
         const scrollY = window.scrollY ?? document.documentElement.scrollTop;
         const scrollX = window.scrollX ?? document.documentElement.scrollLeft;
-        const width   = Math.max(rect.width, 200);
+        const width = Math.max(rect.width, 200);
 
-        const dialog    = target.closest('dialog');
-        const inDialog  = container.closest?.('dialog');
+        const dialog = target.closest('dialog');
+        const inDialog = container.closest?.('dialog');
         let top, left;
 
         if (dialog && inDialog) {
             const dr = dialog.getBoundingClientRect();
-            top  = (rect.top - dr.top + rect.height) + 'px';
+            top = (rect.top - dr.top + rect.height) + 'px';
             left = (rect.left - dr.left) + 'px';
         } else {
-            top  = (rect.top + scrollY + rect.height) + 'px';
+            top = (rect.top + scrollY + rect.height) + 'px';
             left = (rect.left + scrollX) + 'px';
         }
 
         container.style.width = width + 'px';
-        container.style.top   = top;
-        container.style.left  = left;
+        container.style.top = top;
+        container.style.left = left;
     }
 
     // =========================================================================
@@ -2393,7 +2461,7 @@ class Flexdatalist {
      * @param {boolean} ro
      */
     _applyReadonly(ro) {
-        this._hiddenInput.readOnly    = ro;
+        this._hiddenInput.readOnly = ro;
         this._alias.readOnly = ro;
 
         if (this._multipleEl) {
@@ -2416,8 +2484,12 @@ class Flexdatalist {
      * @returns {boolean} Whether localStorage is available and cache is enabled.
      */
     _cacheSupported() {
-        if (!this._options.cache) return false;
-        try { return 'localStorage' in window && window.localStorage !== null; } catch { return false; }
+        if (!this._options.cache) {
+            return false;
+        }
+        try {
+            return 'localStorage' in window && window.localStorage !== null;
+        } catch { return false; }
     }
 
     /**
