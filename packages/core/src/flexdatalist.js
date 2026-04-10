@@ -1886,8 +1886,6 @@ class Flexdatalist {
             url += (url.includes('?') ? '&' : '?') + new URLSearchParams(settings.data).toString();
         }
 
-        console.log('fetchOpts', fetchOpts);
-
         fetch(url, fetchOpts)
             .then(r => r.json())
             .then(data => settings.success(this._extractRemoteData(data)))
