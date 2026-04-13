@@ -1535,8 +1535,12 @@ class Flexdatalist {
         });
 
         // Push value into serialised storage.
+        // Use serialised comparison: `val` is always a string but `current` items
+        // may be parsed objects (JSON mode) or numbers (numeric valueProperty),
+        // so `Array.includes` would produce false negatives from the type mismatch.
         const current = this.getValue();
-        if (!current.includes(val)) {
+        const valNorm = this._toStr(this._toObj(val));
+        if (!current.some(item => this._toStr(item) === valNorm)) {
             current.push(this._toObj(val));
             this._value = this._toStr(current);
             this._hiddenInput.value = this._value;
