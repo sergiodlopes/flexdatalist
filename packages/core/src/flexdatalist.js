@@ -1541,7 +1541,8 @@ class Flexdatalist {
         const current = this.getValue();
         const valNorm = this._toStr(this._toObj(val));
         if (!current.some(item => this._toStr(item) === valNorm)) {
-            current.push(this._toObj(val));
+            // CSV current is string[], JSON current is object[] — push the matching type.
+            current.push(this._isCSV() ? String(val) : this._toObj(val));
             this._value = this._toStr(current);
             this._hiddenInput.value = this._value;
         }
