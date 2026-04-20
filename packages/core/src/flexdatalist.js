@@ -2528,7 +2528,7 @@ class Flexdatalist {
             const ic = this._multipleEl.querySelector('li.input-container');
             this._multipleEl.classList.toggle('disabled', disabled);
             btns.forEach(b => { b.style.display = disabled ? 'none' : ''; });
-            if (ic) {
+            if (ic && ic.style.display !== "none") {
                 ic.style.display = disabled ? 'none' : '';
             }
         }
