@@ -76,6 +76,11 @@ class Flexdatalist {
          */
         groupView: 'headers',
         /**
+         * Animate tab pills into place when results open (tabs mode only).
+         * @type {boolean}
+         */
+        groupTabAnimation: true,
+        /**
          * Property (or `{placeholder}` pattern) used as the display text in
          * the alias input. Defaults to the first entry of `searchIn`.
          * @type {string|null}
@@ -2590,6 +2595,14 @@ class Flexdatalist {
 
         containerEl.appendChild(tablist);
         containerEl.appendChild(panelsWrap);
+
+        if (this._options.groupTabAnimation) {
+            // Restart enter animation each time results open.
+            tablist.classList.remove('fdl-group-tabs-enter');
+            // Force reflow so re-adding the class retriggers keyframes.
+            tablist.getBoundingClientRect();
+            tablist.classList.add('fdl-group-tabs-enter');
+        }
 
         setActive(0, { focusTab: false });
     }
