@@ -71,6 +71,20 @@ fd.setValue('Paris')
 console.log(fd.getValue());
 ```
 
+### Grouped results as tabs
+
+When `groupBy` is set, you can render grouped results as tab “pills” instead of inline group headers:
+
+```js
+const [fd] = await Flexdatalist.init('#people', {
+    url: '/api/people',
+    minLength: 1,
+    groupBy: 'type',          // e.g. "People", "Task", "Pages"...
+    groupView: 'tabs',        // 'headers' (default) | 'tabs'
+    visibleProperties: ['name', 'email'],
+});
+```
+
 ## Features
 
 - **Zero dependencies** -- no jQuery or other libraries required
@@ -79,7 +93,7 @@ console.log(fd.getValue());
 - **Static data** -- pass an array of objects or a URL to a static JSON file
 - **`<datalist>` support** -- reads `<option>` elements from a linked datalist
 - **Multiple values** -- tag-style input with add, remove, toggle, collapse, and paste support
-- **Result grouping** -- group results by any property with headers and item counts
+- **Result grouping** -- group results by any property with headers (default) or tabs, with item counts
 - **Keyboard navigation** -- arrow keys, Enter, Escape, Backspace, Tab
 - **Search modes** -- starts-with, contains, exact match, word-by-word, or fully server-side
 - **Accent-insensitive** -- diacritics are stripped before comparison (NFD normalisation)
@@ -130,6 +144,7 @@ All options can be set via the constructor, via `data-*` attributes (camelCase b
 | `visibleProperties` | `string[]` | `[]` | Properties rendered in each result item |
 | `iconProperty` | `string` | `'thumb'` | Property containing an image URL |
 | `groupBy` | `string\|false` | `false` | Property to group results by |
+| `groupView` | `'headers'\|'tabs'` | `'headers'` | Grouped results renderer (requires `groupBy`) |
 | `maxShownResults` | `number` | `100` | Maximum results rendered (0 = unlimited) |
 | `focusFirstResult` | `boolean` | `false` | Auto-activate the first result |
 | `noResultsText` | `string` | `'No results found for "{keyword}"'` | Message when no results match |

@@ -116,6 +116,101 @@
     scrollbar-color: var(--fdl-scrollbar) transparent;
 }
 
+/* ─── Grouped tabs mode (outer shell) ───────────────────────── */
+.flexdatalist-results.fdl-tabs {
+    padding: 0;
+    overflow: hidden; /* panels handle scrolling */
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Tab strip */
+.flexdatalist-results.fdl-tabs .fdl-group-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.5rem 0.4rem;
+    border-bottom: 1px solid var(--fdl-border);
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--fdl-scrollbar) transparent;
+}
+
+.flexdatalist-results.fdl-tabs .fdl-group-tab {
+    appearance: none;
+    border: 1px solid var(--fdl-border);
+    background: var(--fdl-bg);
+    color: var(--fdl-text);
+    border-radius: 9999px;
+    padding: 0.25rem 0.55rem;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.flexdatalist-results.fdl-tabs .fdl-group-tab:focus {
+    outline: 2px solid rgba(99,102,241,0.35);
+    outline-offset: 2px;
+}
+
+.flexdatalist-results.fdl-tabs .fdl-group-tab.is-active {
+    background: var(--fdl-accent);
+    border-color: var(--fdl-accent);
+    color: var(--fdl-accent-fg);
+}
+
+.flexdatalist-results.fdl-tabs .fdl-group-tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.2rem;
+    padding: 0.05rem 0.35rem;
+    border-radius: 9999px;
+    font-size: 0.85em;
+    font-weight: 700;
+    background: rgba(100,116,139,0.12);
+    color: var(--fdl-text-muted);
+}
+.flexdatalist-results.fdl-tabs .fdl-group-tab.is-active .fdl-group-tab-count {
+    background: rgba(255,255,255,0.25);
+    color: inherit;
+}
+
+/* Panels wrapper + panels */
+.flexdatalist-results.fdl-tabs .fdl-group-panels {
+    position: relative;
+    height: 280px;
+}
+
+.flexdatalist-results.fdl-tabs ul.fdl-group-panel {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    background: var(--fdl-bg);
+    overflow-y: auto;
+    max-height: 280px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--fdl-scrollbar) transparent;
+    transition: transform 220ms ease;
+}
+
+.flexdatalist-results.fdl-tabs ul.fdl-group-panel[hidden] {
+    display: none;
+}
+
+/* During animation we slide both panels; keep them above each other */
+.flexdatalist-results.fdl-tabs ul.fdl-group-panel.is-animating {
+    will-change: transform;
+}
+
 /* ─── Result items ──────────────────────────────────────────── */
 .flexdatalist-results li {
     padding: 0.5rem 0.875rem;

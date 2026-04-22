@@ -69,6 +69,13 @@ class Flexdatalist {
         /** @type {string|false} Item property name to group results by. */
         groupBy: false,
         /**
+         * Grouped results rendering mode.
+         * - 'headers': render group headers inside the result list (default)
+         * - 'tabs': render a tab strip and switch panels with slide animation
+         * @type {'headers'|'tabs'}
+         */
+        groupView: 'headers',
+        /**
          * Property (or `{placeholder}` pattern) used as the display text in
          * the alias input. Defaults to the first entry of `searchIn`.
          * @type {string|null}
@@ -889,42 +896,45 @@ class Flexdatalist {
 
         // Close results when clicking outside (skipped for custom containers).
         document.addEventListener('mouseup', e => {
-            const ul = document.querySelector('.flexdatalist-results');
-            if (!ul || ul._fdCustom) {
+            const container = document.querySelector('.flexdatalist-results');
+            if (!container || container._fdCustom) {
                 return;
             }
-            const target = ul._fdTarget;
+            const target = container._fdTarget;
             if (target && target === document.activeElement) return;
-            if (!ul.contains(e.target) && ul !== e.target) ul.remove();
+            if (!container.contains(e.target) && container !== e.target) container.remove();
         });
 
         // Arrow key navigation + Enter/Escape.
         document.addEventListener('keydown', e => {
-            const ul = document.querySelector('.flexdatalist-results');
-            if (!ul) {
+            const container = document.querySelector('.flexdatalist-results');
+            if (!container) {
                 return;
             }
 
-            const items = [...ul.querySelectorAll('li.item')];
+            const input = container._fdInput;
+            const fd = input ? Flexdatalist.getInstance(input) : null;
+            const panel = fd ? fd._getActivePanel(container) : container;
+            const items = [...panel.querySelectorAll('li.item')];
             if (!items.length) {
                 return;
             }
 
             const key = e.key;
-            const custom = ul._fdCustom;
+            const custom = container._fdCustom;
 
-            if (key === 'Escape') { if (!custom) ul.remove(); return; }
+            if (key === 'Escape') { if (!custom) container.remove(); return; }
 
             if (key === 'Enter') {
-                const active = ul.querySelector('li.item.active');
+                const active = panel.querySelector('li.item.active');
                 if (active) { e.preventDefault(); active.click(); }
-                else if (!custom) { e.preventDefault(); ul.remove(); }
+                else if (!custom) { e.preventDefault(); container.remove(); }
                 return;
             }
 
             if (key === 'ArrowDown' || key === 'ArrowUp') {
                 e.preventDefault();
-                const active = ul.querySelector('li.item.active');
+                const active = panel.querySelector('li.item.active');
                 const idx = active ? items.indexOf(active) : -1;
                 active?.classList.remove('active');
 
@@ -933,7 +943,7 @@ class Flexdatalist {
                     : (items[idx - 1] ?? items[items.length - 1]);
 
                 next?.classList.add('active');
-                if (next) ul.scrollTop = next.offsetTop;
+                if (next) panel.scrollTop = next.offsetTop;
             }
         });
 
@@ -2176,24 +2186,36 @@ class Flexdatalist {
             return;
         }
 
-        const ul = this._resultsContainer();
         const o = this._options;
+        const useTabs = !!(o.groupBy && o.groupView === 'tabs');
 
+        let container;
         if (!o.groupBy) {
-            this._renderItems(results, ul);
+            container = this._resultsContainer();
+            const host = this._getActivePanel(container) ?? container;
+            this._renderItems(results, host);
         } else {
             const grouped = this._groupResults(results);
-            for (const [groupName, items] of Object.entries(grouped)) {
-                const groupText = this._hlProp(items[0], o.groupBy, groupName);
-                const li = document.createElement('li');
-                li.className = 'group';
-                li.innerHTML = `<span class="group-name">${groupText}</span><span class="group-item-count"> ${items.length}</span>`;
-                ul.appendChild(li);
-                this._renderItems(items, ul);
+            const groupNames = Object.keys(grouped);
+
+            if (useTabs && groupNames.length > 1) {
+                container = this._resultsContainer({ tabs: true });
+                this._renderGroupedTabs(grouped, container);
+            } else {
+                // headers (default) + tabs single-group fallback
+                container = this._resultsContainer();
+                for (const [groupName, items] of Object.entries(grouped)) {
+                    const groupText = this._hlProp(items[0], o.groupBy, groupName);
+                    const li = document.createElement('li');
+                    li.className = 'group';
+                    li.innerHTML = `<span class="group-name">${groupText}</span><span class="group-item-count"> ${items.length}</span>`;
+                    container.appendChild(li);
+                    this._renderItems(items, container);
+                }
             }
         }
 
-        const liItems = [...ul.querySelectorAll('li:not(.group)')];
+        const liItems = [...container.querySelectorAll('li.item')];
         for (const li of liItems) {
             li.addEventListener('click', () => {
                 const item = li._fdItem;
@@ -2208,14 +2230,15 @@ class Flexdatalist {
                 if (o.multiple) setTimeout(() => this._alias.focus(), 500);
             });
             li.addEventListener('mouseenter', () => {
-                liItems.forEach(l => l.classList.remove('active'));
+                const host = li.closest('ul') ?? container;
+                [...host.querySelectorAll('li.item.active')].forEach(l => l.classList.remove('active'));
                 li.classList.add('active');
                 li.dispatchEvent(new CustomEvent('active:flexdatalist.results', { detail: li._fdItem }));
             });
             li.addEventListener('mouseleave', () => li.classList.remove('active'));
         }
 
-        if (o.focusFirstResult) ul.querySelector('li.item')?.classList.add('active');
+        if (o.focusFirstResult) (this._getActivePanel(container) ?? container).querySelector('li.item')?.classList.add('active');
     }
 
     /**
@@ -2317,48 +2340,81 @@ class Flexdatalist {
     }
 
     /**
+     * Return the currently active result items host element.
+     *
+     * In standard mode this is the results `<ul>` itself.
+     * In grouped tabs mode this is the visible `ul.fdl-group-panel`.
+     *
+     * @private
+     * @param {HTMLElement} [containerEl] Optional outer results container.
+     * @returns {HTMLElement|null}
+     */
+    _getActivePanel(containerEl) {
+        containerEl = containerEl ?? document.querySelector('.flexdatalist-results');
+        if (!containerEl) return null;
+        if (containerEl.tagName === 'UL') return containerEl;
+        return containerEl.querySelector('ul.fdl-group-panel:not([hidden])')
+            ?? containerEl.querySelector('ul.fdl-group-panel')
+            ?? containerEl;
+    }
+
+    /**
      * Return (creating if necessary) the results container element.
      * When `options.resultsContainer` is set, returns the user-provided
      * element without creating or positioning anything.
      *
      * @private
+     * @param {{ tabs?: boolean }} [opts]
      * @returns {HTMLElement}
      */
-    _resultsContainer() {
+    _resultsContainer(opts = {}) {
+        const { tabs = false } = opts;
         if (this._customContainer) {
             const el = this._customContainer;
             if (!el.classList.contains('flexdatalist-results')) {
                 el.classList.add('flexdatalist-results');
             }
-            el.setAttribute('role', 'listbox');
+            el.classList.toggle('fdl-tabs', tabs);
+            if (tabs) {
+                el.removeAttribute('role');
+            } else {
+                el.setAttribute('role', 'listbox');
+            }
             el._fdTarget = this._multipleEl ?? this._alias;
             el._fdInput = this._hiddenInput;
             return el;
         }
 
-        let ul = document.querySelector('ul.flexdatalist-results');
-        if (ul) {
-            return ul;
+        let container = document.querySelector('.flexdatalist-results');
+        if (container) {
+            const isTabs = container.classList.contains('fdl-tabs');
+            if (tabs !== isTabs) {
+                container.remove();
+            } else {
+                return container;
+            }
         }
 
         const target = this._multipleEl ?? this._alias;
         const cs = getComputedStyle(target);
         const parent = target.closest('dialog') ?? document.body;
 
-        ul = document.createElement('ul');
-        ul.className = 'flexdatalist-results';
-        ul.id = this._alias.id + '-results';
-        ul.setAttribute('role', 'listbox');
-        ul.style.borderTopLeftRadius = cs.borderTopLeftRadius;
-        ul.style.borderTopRightRadius = cs.borderTopRightRadius;
-        ul.style.borderBottomLeftRadius = cs.borderBottomLeftRadius;
-        ul.style.borderBottomRightRadius = cs.borderBottomRightRadius;
-        ul._fdTarget = target;
-        ul._fdInput = this._hiddenInput;
+        container = document.createElement(tabs ? 'div' : 'ul');
+        container.className = 'flexdatalist-results' + (tabs ? ' fdl-tabs' : '');
+        container.id = this._alias.id + '-results';
+        if (!tabs) {
+            container.setAttribute('role', 'listbox');
+        }
+        container.style.borderTopLeftRadius = cs.borderTopLeftRadius;
+        container.style.borderTopRightRadius = cs.borderTopRightRadius;
+        container.style.borderBottomLeftRadius = cs.borderBottomLeftRadius;
+        container.style.borderBottomRightRadius = cs.borderBottomRightRadius;
+        container._fdTarget = target;
+        container._fdInput = this._hiddenInput;
 
-        parent.appendChild(ul);
-        this._position(ul, target);
-        return ul;
+        parent.appendChild(container);
+        this._position(container, target);
+        return container;
     }
 
     /**
@@ -2381,6 +2437,161 @@ class Flexdatalist {
             out[key].push(item);
         }
         return out;
+    }
+
+    /**
+     * Render grouped results as a tab strip + animated sliding panels.
+     *
+     * @private
+     * @param {Object.<string, Object[]>} grouped GroupName -> items map.
+     * @param {HTMLElement} containerEl Outer results container element.
+     */
+    _renderGroupedTabs(grouped, containerEl) {
+        containerEl.replaceChildren();
+
+        const groupBy = this._options.groupBy;
+        const groupNames = Object.keys(grouped);
+        const baseId = this._alias.id + '-tabs';
+
+        // Force an initial activation pass so the visible panel's pill
+        // is styled as active when the results open.
+        containerEl.dataset.fdlActiveTabIdx = '-1';
+
+        const tablist = document.createElement('div');
+        tablist.className = 'fdl-group-tabs';
+        tablist.setAttribute('role', 'tablist');
+
+        const panelsWrap = document.createElement('div');
+        panelsWrap.className = 'fdl-group-panels';
+
+        const tabs = [];
+        const panels = [];
+
+        const setActive = (nextIdx, { focusTab = false } = {}) => {
+            nextIdx = Math.max(0, Math.min(groupNames.length - 1, nextIdx));
+            const prevIdx = Number(containerEl.dataset.fdlActiveTabIdx ?? 0);
+            if (nextIdx === prevIdx && panels.length) {
+                if (focusTab) tabs[nextIdx]?.focus();
+                return;
+            }
+
+            const prevPanel = panels[prevIdx];
+            const nextPanel = panels[nextIdx];
+            const dir = nextIdx > prevIdx ? 1 : -1;
+
+            tabs.forEach((t, i) => {
+                const active = i === nextIdx;
+                t.classList.toggle('is-active', active);
+                t.setAttribute('aria-selected', active ? 'true' : 'false');
+                t.tabIndex = active ? 0 : -1;
+            });
+
+            // If the previous panel is missing (first activation), just show the next.
+            if (!prevPanel) {
+                panels.forEach((p, i) => {
+                    const active = i === nextIdx;
+                    p.hidden = !active;
+                    p.setAttribute('aria-hidden', active ? 'false' : 'true');
+                    p.classList.toggle('is-active', active);
+                });
+                containerEl.dataset.fdlActiveTabIdx = String(nextIdx);
+                if (focusTab) tabs[nextIdx]?.focus();
+                return;
+            }
+
+            // Prepare panels for animation.
+            prevPanel.hidden = false;
+            prevPanel.setAttribute('aria-hidden', 'false');
+            nextPanel.hidden = false;
+            nextPanel.setAttribute('aria-hidden', 'false');
+
+            nextPanel.classList.add('is-animating');
+            prevPanel.classList.add('is-animating');
+
+            nextPanel.style.transform = `translateX(${dir * 100}%)`;
+            prevPanel.style.transform = 'translateX(0%)';
+
+            // Kick the transition.
+            requestAnimationFrame(() => {
+                // Force layout so the initial transform is committed before transitioning.
+                nextPanel.getBoundingClientRect();
+                nextPanel.style.transform = 'translateX(0%)';
+                prevPanel.style.transform = `translateX(${-dir * 100}%)`;
+            });
+
+            const onDone = () => {
+                nextPanel.removeEventListener('transitionend', onDone);
+
+                panels.forEach((p, i) => {
+                    const active = i === nextIdx;
+                    p.hidden = !active;
+                    p.setAttribute('aria-hidden', active ? 'false' : 'true');
+                    p.classList.toggle('is-active', active);
+                    p.classList.remove('is-animating');
+                    p.style.transform = '';
+                });
+
+                containerEl.dataset.fdlActiveTabIdx = String(nextIdx);
+                if (focusTab) tabs[nextIdx]?.focus();
+            };
+            nextPanel.addEventListener('transitionend', onDone, { once: true });
+        };
+
+        groupNames.forEach((groupName, idx) => {
+            const items = grouped[groupName] ?? [];
+            const groupText = items.length ? this._hlProp(items[0], groupBy, groupName) : String(groupName);
+
+            const tabId = `${baseId}-tab-${idx}`;
+            const panelId = `${baseId}-panel-${idx}`;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'fdl-group-tab';
+            btn.id = tabId;
+            btn.setAttribute('role', 'tab');
+            btn.setAttribute('aria-controls', panelId);
+            btn.setAttribute('aria-selected', idx === 0 ? 'true' : 'false');
+            btn.tabIndex = idx === 0 ? 0 : -1;
+            btn.dataset.index = String(idx);
+            btn.innerHTML = `<span class="fdl-group-tab-name">${groupText}</span><span class="fdl-group-tab-count">${items.length}</span>`;
+            btn.addEventListener('click', () => setActive(idx, { focusTab: false }));
+            tabs.push(btn);
+            tablist.appendChild(btn);
+
+            const panel = document.createElement('ul');
+            panel.className = 'fdl-group-panel' + (idx === 0 ? ' is-active' : '');
+            panel.id = panelId;
+            panel.setAttribute('role', 'tabpanel');
+            panel.setAttribute('aria-labelledby', tabId);
+            panel.setAttribute('aria-hidden', idx === 0 ? 'false' : 'true');
+            panel.hidden = idx !== 0;
+
+            this._renderItems(items, panel);
+            panels.push(panel);
+            panelsWrap.appendChild(panel);
+        });
+
+        tablist.addEventListener('keydown', e => {
+            const key = e.key;
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
+            e.preventDefault();
+
+            const current = Number(containerEl.dataset.fdlActiveTabIdx ?? 0);
+            const next = key === 'Home'
+                ? 0
+                : key === 'End'
+                    ? groupNames.length - 1
+                    : key === 'ArrowRight'
+                        ? (current + 1) % groupNames.length
+                        : (current - 1 + groupNames.length) % groupNames.length;
+
+            setActive(next, { focusTab: true });
+        });
+
+        containerEl.appendChild(tablist);
+        containerEl.appendChild(panelsWrap);
+
+        setActive(0, { focusTab: false });
     }
 
     /**
@@ -2436,7 +2647,7 @@ class Flexdatalist {
             this._customContainer.classList.remove('flexdatalist-fetching-results');
             this._customContainer.classList.add('flexdatalist-results');
         } else {
-            document.querySelectorAll('ul.flexdatalist-fetching-results').forEach(el => el.remove());
+            document.querySelectorAll('.flexdatalist-fetching-results').forEach(el => el.remove());
         }
     }
 
@@ -2453,7 +2664,7 @@ class Flexdatalist {
         if (this._customContainer) {
             this._customContainer.replaceChildren();
         } else {
-            document.querySelectorAll(itemsOnly ? 'ul.flexdatalist-results li' : 'ul.flexdatalist-results')
+            document.querySelectorAll(itemsOnly ? '.flexdatalist-results li' : '.flexdatalist-results')
                 .forEach(el => el.remove());
         }
         this._dispatch('removed:flexdatalist.results');
@@ -2472,7 +2683,7 @@ class Flexdatalist {
      * @param {HTMLElement} [target]     Defaults to `container._fdTarget`.
      */
     _position(container, target) {
-        container = container ?? document.querySelector('ul.flexdatalist-results');
+        container = container ?? document.querySelector('.flexdatalist-results');
         if (!container || container._fdCustom) {
             return;
         }

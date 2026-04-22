@@ -669,7 +669,7 @@ value="166,149"</div>
         <h2 class="text-xl font-bold mb-1">7. <code>groupBy</code></h2>
         <p class="text-sm text-gray-500 mb-6">Group dropdown results by a property value.</p>
 
-        <div class="grid md:grid-cols-2 gap-6">
+        <div class="grid md:grid-cols-3 gap-6">
             <!-- 7a continent -->
             <div class="bg-white border rounded-xl p-5">
                 <h3 class="font-semibold mb-3">Grouped by <code>continent</code></h3>
@@ -695,6 +695,15 @@ value="166,149"</div>
                     placeholder="Fruits grouped by category" name="grp_fruit">
                 <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="grp_fruit">—</span></p>
                 <div class="code-block mt-3">groupBy: 'category'</div>
+            </div>
+
+            <!-- 7c groupView tabs -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3">Grouped by <code>category</code> — <code>groupView: 'tabs'</code></h3>
+                <input id="grp-fruit-tabs" type="text" class="fdl-input"
+                    placeholder="Fruits grouped as tabs" name="grp_fruit_tabs">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="grp_fruit_tabs">—</span></p>
+                <div class="code-block mt-3">groupBy: 'category', groupView: 'tabs'</div>
             </div>
         </div>
     </section>
@@ -1157,6 +1166,16 @@ Flexdatalist.init('#grp-fruit', {
     searchIn: ['label'],
     visibleProperties: ['label', 'color'],
     groupBy: 'category',
+    minLength: 0,
+    maxShownResults: 30,
+});
+
+Flexdatalist.init('#grp-fruit-tabs', {
+    data: FRUITS,
+    searchIn: ['label'],
+    visibleProperties: ['label', 'color'],
+    groupBy: 'category',
+    groupView: 'tabs',
     minLength: 0,
     maxShownResults: 30,
 });
