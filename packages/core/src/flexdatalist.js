@@ -443,7 +443,7 @@ class Flexdatalist {
         const dataOpts = {};
 
         for (const key of Object.keys(Flexdatalist.defaults)) {
-            const attr = 'data-' + key.replace(/([A-Z])/g, c => '-' + classes.toLowerCase());
+            const attr = 'data-' + key.replace(/([A-Z])/g, ch => '-' + ch.toLowerCase());
             if (el.hasAttribute(attr)) {
                 let v = el.getAttribute(attr);
                 try { v = JSON.parse(v); } catch (_) {}
