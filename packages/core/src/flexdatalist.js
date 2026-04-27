@@ -312,59 +312,55 @@ class Flexdatalist {
         /** @type {Record<string, string>} Resolved CSS classes for this instance. */
         this._classes = {
             // Input / setup
-            root:              p + 'flexdatalist',
-            set:               p + 'flexdatalist-set',
+            root:              'flexdatalist',
+            set:               'flexdatalist-set',
             alias:             p + 'flexdatalist-alias',
             multiple:          p + 'flexdatalist-multiple',
-            multipleValue:     p + 'flexdatalist-multiple-value',
-            // Focus is intentionally unprefixed (scoped to widget markup).
+            multipleValue:     'flexdatalist-multiple-value',
             multipleFocus:     'focus',
 
             // Results container
-            results:           p + 'flexdatalist-results',
-            resultsFetching:   p + 'flexdatalist-fetching-results',
-            resultsLoaderItem: p + 'flexdatalist-fetching-results-loader',
+            results:           'flexdatalist-results',
+            resultsFetching:   'flexdatalist-fetching-results',
+            resultsLoaderItem: 'flexdatalist-fetching-results-loader',
 
             // Grouping (tabs)
-            tabs:              p + 'fdl-tabs',
-            groupTabs:         p + 'fdl-group-tabs',
-            groupPanels:       p + 'fdl-group-panels',
-            groupTab:          p + 'fdl-group-tab',
-            groupTabName:      p + 'fdl-group-tab-name',
-            groupTabCount:     p + 'fdl-group-tab-count',
-            groupPanel:        p + 'fdl-group-panel',
-            groupTabsEnter:    p + 'fdl-group-tabs-enter',
+            tabs:              'fdl-tabs',
+            groupTabs:         'fdl-group-tabs',
+            groupPanels:       'fdl-group-panels',
+            groupTab:          'fdl-group-tab',
+            groupTabName:      'fdl-group-tab-name',
+            groupTabCount:     'fdl-group-tab-count',
+            groupPanel:        'fdl-group-panel',
+            groupTabsEnter:    'fdl-group-tabs-enter',
 
             // Multiple values UI
-            // Utility hook; keep unprefixed (scoped to widget markup).
             inputContainer:    'input-container',
             value:             'value',
-            // Toggle state is intentionally unprefixed (scoped to widget markup).
             valueToggle:       'toggle',
             valueText:         'text',
-            // Remove button class is scoped within widget; keep unprefixed.
             remove:            'fdl-remove',
-            collapsedItem:     p + 'flexdatalist-collapsed-item',
-            collapsedControl:  p + 'flexdatalist-collapsed-control',
+            collapsedItem:     'flexdatalist-collapsed-item',
+            collapsedControl:  'flexdatalist-collapsed-control',
 
-            // Misc UI state (scoped; keep unprefixed to avoid unnecessary CSS churn)
+            // Misc UI state (scoped; unprefixed)
             disabled:          'disabled',
             active:            'active',
             isActive:          'is-active',
             isAnimating:       'is-animating',
 
             // Loading state for input
-            loading:           p + 'flexdatalist-loading',
-            fetching:          p + 'flexdatalist-fetching',
-            fetchAnimation:    p + 'flexdatalist-fetch-animation',
+            loading:           'flexdatalist-loading',
+            fetching:          'flexdatalist-fetching',
+            fetchAnimation:    'flexdatalist-fetch-animation',
 
             // Results items
-            item:              p + 'item',
-            group:             p + 'group',
-            groupName:         p + 'group-name',
-            groupItemCount:    p + 'group-item-count',
-            noResults:         p + 'no-results',
-            addNewItem:        p + 'add-new-item',
+            item:              'item',
+            group:             'group',
+            groupName:         'group-name',
+            groupItemCount:    'group-item-count',
+            noResults:         'no-results',
+            addNewItem:        'add-new-item',
         };
 
         /** @type {HTMLElement|null} User-provided results container (never created/destroyed by us). */
@@ -1011,13 +1007,37 @@ class Flexdatalist {
             if (!fd) return;
 
             const container = fd._resultsEl;
+            const key = e.key;
+
+            if (
+                (key === 'ArrowRight' || key === 'ArrowLeft')
+                && typeof container._fdCycleGroupedTab === 'function'
+                && activeEl === fd._alias
+            ) {
+                const alias = fd._alias;
+                const len = alias.value.length;
+                const sel0 = alias.selectionStart ?? 0;
+                const sel1 = alias.selectionEnd ?? 0;
+                const fullRange = len > 0 && sel0 === 0 && sel1 === len;
+                const collapsed = sel0 === sel1;
+                let atBoundary = fullRange;
+                if (!atBoundary && collapsed) {
+                    atBoundary = key === 'ArrowRight' ? sel0 >= len : sel0 <= 0;
+                }
+                if (atBoundary) {
+                    e.preventDefault();
+                    const delta = key === 'ArrowRight' ? 1 : -1;
+                    container._fdCycleGroupedTab(delta, { focusTab: false });
+                    return;
+                }
+            }
+
             const panel = fd._getActivePanel(container) ?? container;
             const items = [...panel.querySelectorAll('li.item')];
             if (!items.length) {
                 return;
             }
 
-            const key = e.key;
             const custom = container._fdCustom;
 
             if (key === 'Escape') {
@@ -2312,6 +2332,7 @@ class Flexdatalist {
      */
     _resultsShow(results) {
         this._resultsRemove(true);
+        if (this._resultsEl) delete this._resultsEl._fdCycleGroupedTab;
         if (!results) {
             return;
         }
@@ -2732,6 +2753,15 @@ class Flexdatalist {
 
             setActive(next, { focusTab: true });
         });
+
+        const nGroups = groupNames.length;
+        containerEl._fdCycleGroupedTab = (delta, opts = {}) => {
+            if (nGroups <= 0) return;
+            let current = Number(containerEl.dataset.fdlActiveTabIdx);
+            if (!Number.isFinite(current) || current < 0) current = 0;
+            const next = (current + delta + nGroups) % nGroups;
+            setActive(next, opts);
+        };
 
         containerEl.appendChild(tablist);
         containerEl.appendChild(panelsWrap);
