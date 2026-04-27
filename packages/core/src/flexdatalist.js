@@ -1038,16 +1038,33 @@ class Flexdatalist {
      * @param {ClipboardEvent} e
      */
     _onPaste(e) {
+        const o = this._options;
         let text = e.clipboardData?.getData('text/plain') ?? '';
         if (!text) return;
+
+        // Only intercept paste to create multiple free-text tags.
+        // In all other modes, allow the browser to paste normally.
+        if (!o.multiple || o.selectionRequired) return;
+
+        // If the pasted text contains no separators, it's regular typing: let it paste.
+        const hasNewline = /[\r\n]/.test(text);
+        if (!hasNewline && !text.includes(',')) return;
+
         e.preventDefault();
         e.stopPropagation();
 
-        for (const nl of ['\r\n', '\n\r', '\n', '\r']) {
-            if (text.includes(nl)) { text = text.split(nl).join(','); break; }
-        }
-        this.addValue(text.split(',').filter(v => v.length > 0));
-        setTimeout(() => this._alias.focus(), 200);
+        // Normalize newlines to comma separators.
+        text = text.replace(/\r\n|\n\r|\n|\r/g, ',');
+
+        this.addValue(
+            text
+                .split(',')
+                .map(v => v.trim())
+                .filter(v => v.length > 0)
+        );
+        const focus = () => this._alias.focus();
+        if (typeof queueMicrotask === 'function') queueMicrotask(focus);
+        else Promise.resolve().then(focus);
     }
 
     // =========================================================================
