@@ -23,6 +23,32 @@ npm install flexdatalist
 
 The class auto-initialises on `DOMContentLoaded` for inputs with the `flexdatalist` class.
 
+### Running v2 + v3 side-by-side (avoiding CSS conflicts)
+
+Flexdatalist v3 can namespace its CSS classes so it can coexist with v2 on the same page.
+
+- **Option**: `classPrefix` (default: empty string)
+  - When empty, v3 uses the legacy class names (compatible with v2 CSS).
+  - When set (e.g. `fd3-`), v3 will emit prefixed classes like `fd3-flexdatalist-results`.
+
+Example (using data-attributes):
+
+```html
+<!-- v2 input (default classes) -->
+<input class="flexdatalist" data-url="/api/v2/cities" />
+
+<!-- v3 input (prefixed classes) -->
+<input class="flexdatalist" data-class-prefix="fd3-" data-url="/api/v3/cities" />
+```
+
+Example (JS init):
+
+```js
+await Flexdatalist.init('#cityV3', { classPrefix: 'fd3-' });
+```
+
+**Important**: your CSS must match the prefix. The easiest approach is to copy `flexdatalist.css` and prefix its selectors (e.g. replace `.flexdatalist-results` with `.fd3-flexdatalist-results`, etc.).
+
 ### ES module (bundler)
 
 ```js

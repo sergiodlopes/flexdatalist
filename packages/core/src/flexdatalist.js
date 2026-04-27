@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Flexdatalist — standalone ES6 class.
  *
  * Autocomplete / tag input with remote & static data, grouping, keyboard
@@ -178,12 +178,24 @@ class Flexdatalist {
          * @type {HTMLElement|string|null}
          */
         resultsContainer: null,
+        /** @type {string} Prefix applied to Flexdatalist CSS classes (for coexisting versions). */
+        classPrefix: '',
         /** @type {boolean} Log warnings to the console. */
         debug: true,
     };
 
-    /** @type {WeakMap<HTMLElement, Flexdatalist>} */
-    static #instances = new WeakMap();
+    /**
+     * Registry of all live instances on the page.
+     *
+     * We intentionally use an iterable `Map` (instead of `WeakMap`) so that the
+     * once-per-page global event handlers can iterate instances without relying
+     * on document-global selectors.
+     *
+     * `destroy()` removes entries to avoid leaks.
+     *
+     * @type {Map<HTMLElement, Flexdatalist>}
+     */
+    static #instances = new Map();
 
     /** @type {boolean} Whether global document listeners have been attached. */
     static #globalBound = false;
@@ -250,13 +262,15 @@ class Flexdatalist {
             throw new TypeError('Flexdatalist: first argument must be an HTMLElement.');
         }
 
-        if (el.classList.contains('flexdatalist-set')) {
-            console.warn('Flexdatalist: element already has an instance. This might cause issues.', el);
-            return;
-        }
-
         // Destroy any existing instance on this element.
-        Flexdatalist.getInstance(el)?.destroy();
+        const existing = Flexdatalist.getInstance(el);
+        if (existing) {
+            existing.destroy();
+        } else if (el.classList.contains('flexdatalist-set')) {
+            // Legacy/foreign marker (e.g. from another Flexdatalist build).
+            // We do not return early because classPrefix may change marker class names.
+            console.warn('Flexdatalist: element appears to be already initialised. This might cause issues.', el);
+        }
 
         /** @type {HTMLInputElement} Original input, hidden off-screen — holds the submitted form value. */
         this._hiddenInput = el;
@@ -266,6 +280,9 @@ class Flexdatalist {
 
         /** @type {HTMLUListElement|null} Wrapper `<ul>` used in multiple mode. */
         this._multipleEl = null;
+
+        /** @type {HTMLElement|null} Currently-open results container for this instance. */
+        this._resultsEl = null;
 
         /** @type {string} Internal serialised value string. */
         this._value = el.value || '';
@@ -290,6 +307,65 @@ class Flexdatalist {
 
         /** @type {Object} Resolved options for this instance. */
         this._options = this._buildOptions(options);
+
+        const p = String(this._options.classPrefix ?? '');
+        /** @type {Record<string, string>} Resolved CSS classes for this instance. */
+        this._classes = {
+            // Input / setup
+            root:              p + 'flexdatalist',
+            set:               p + 'flexdatalist-set',
+            alias:             p + 'flexdatalist-alias',
+            multiple:          p + 'flexdatalist-multiple',
+            multipleValue:     p + 'flexdatalist-multiple-value',
+            // Focus is intentionally unprefixed (scoped to widget markup).
+            multipleFocus:     'focus',
+
+            // Results container
+            results:           p + 'flexdatalist-results',
+            resultsFetching:   p + 'flexdatalist-fetching-results',
+            resultsLoaderItem: p + 'flexdatalist-fetching-results-loader',
+
+            // Grouping (tabs)
+            tabs:              p + 'fdl-tabs',
+            groupTabs:         p + 'fdl-group-tabs',
+            groupPanels:       p + 'fdl-group-panels',
+            groupTab:          p + 'fdl-group-tab',
+            groupTabName:      p + 'fdl-group-tab-name',
+            groupTabCount:     p + 'fdl-group-tab-count',
+            groupPanel:        p + 'fdl-group-panel',
+            groupTabsEnter:    p + 'fdl-group-tabs-enter',
+
+            // Multiple values UI
+            // Utility hook; keep unprefixed (scoped to widget markup).
+            inputContainer:    'input-container',
+            value:             'value',
+            // Toggle state is intentionally unprefixed (scoped to widget markup).
+            valueToggle:       'toggle',
+            valueText:         'text',
+            // Remove button class is scoped within widget; keep unprefixed.
+            remove:            'fdl-remove',
+            collapsedItem:     p + 'flexdatalist-collapsed-item',
+            collapsedControl:  p + 'flexdatalist-collapsed-control',
+
+            // Misc UI state (scoped; keep unprefixed to avoid unnecessary CSS churn)
+            disabled:          'disabled',
+            active:            'active',
+            isActive:          'is-active',
+            isAnimating:       'is-animating',
+
+            // Loading state for input
+            loading:           p + 'flexdatalist-loading',
+            fetching:          p + 'flexdatalist-fetching',
+            fetchAnimation:    p + 'flexdatalist-fetch-animation',
+
+            // Results items
+            item:              p + 'item',
+            group:             p + 'group',
+            groupName:         p + 'group-name',
+            groupItemCount:    p + 'group-item-count',
+            noResults:         p + 'no-results',
+            addNewItem:        p + 'add-new-item',
+        };
 
         /** @type {HTMLElement|null} User-provided results container (never created/destroyed by us). */
         this._customContainer = null;
@@ -367,7 +443,7 @@ class Flexdatalist {
         const dataOpts = {};
 
         for (const key of Object.keys(Flexdatalist.defaults)) {
-            const attr = 'data-' + key.replace(/([A-Z])/g, c => '-' + c.toLowerCase());
+            const attr = 'data-' + key.replace(/([A-Z])/g, c => '-' + classes.toLowerCase());
             if (el.hasAttribute(attr)) {
                 let v = el.getAttribute(attr);
                 try { v = JSON.parse(v); } catch (_) {}
@@ -703,8 +779,9 @@ class Flexdatalist {
     destroy(clear = false) {
         const el = this._hiddenInput;
         const container = this._multipleEl ?? this._alias;
+        const classes = this._classes;
 
-        el.classList.remove('flexdatalist', 'flexdatalist-set');
+        el.classList.remove(classes.root, classes.set);
         el.style.position = '';
         el.style.top = '';
         el.style.left = '';
@@ -715,13 +792,15 @@ class Flexdatalist {
 
         if (this._customContainer) {
             this._customContainer.replaceChildren();
-            this._customContainer.classList.remove('flexdatalist-results', 'flexdatalist-fetching-results');
+            this._customContainer.classList.remove(classes.results, classes.resultsFetching);
             this._customContainer.removeAttribute('role');
             delete this._customContainer._fdTarget;
             delete this._customContainer._fdInput;
             delete this._customContainer._fdCustom;
             this._customContainer = null;
         }
+
+        this._resultsEl = null;
 
         // @ts-ignore
         Flexdatalist.#instances.delete(el);
@@ -739,6 +818,7 @@ class Flexdatalist {
     _setUp() {
         const el = this._hiddenInput;
         const o = this._options;
+        const classes = this._classes;
 
         this._alias = this._makeAlias();
 
@@ -755,7 +835,7 @@ class Flexdatalist {
         // Hide the original input; it still participates in form submission.
         el.style.cssText += ';position:absolute;top:-14000px;left:-14000px';
         el.setAttribute('tabindex', '-1');
-        el.classList.add('flexdatalist', 'flexdatalist-set');
+        el.classList.add(classes.root, classes.set);
 
         // Re-point any <label> at the alias so click-to-focus works.
         if (el.id) {
@@ -776,13 +856,14 @@ class Flexdatalist {
     _makeAlias() {
         const el = this._hiddenInput;
         const id = el.id ? el.id + '-flexdatalist' : 'fdl-' + Math.random().toString(36).slice(2, 9);
+        const classes = this._classes;
 
         const alias = document.createElement('input');
         alias.type = 'text';
 
         // Copy classes from original, excluding flexdatalist itself.
-        alias.className = [...el.classList].filter(c => c !== 'flexdatalist').join(' ');
-        alias.classList.add('flexdatalist-alias', id);
+        alias.className = [...el.classList].filter(cls => cls !== classes.root).join(' ');
+        alias.classList.add(classes.alias, id);
 
         // No name → never submitted.
         alias.id = id;
@@ -802,9 +883,10 @@ class Flexdatalist {
     _makeMultiple(alias) {
         const el = this._hiddenInput;
         const cs = getComputedStyle(el);
+        const classes = this._classes;
         const ul = document.createElement('ul');
         ul.setAttribute('tabindex', '1');
-        ul.className = 'flexdatalist-multiple';
+        ul.className = classes.multiple;
         ul.style.borderColor = cs.borderLeftColor;
         ul.style.borderWidth = cs.borderLeftWidth;
         ul.style.borderStyle = cs.borderLeftStyle;
@@ -813,7 +895,7 @@ class Flexdatalist {
         ul.addEventListener('click', () => alias.focus());
 
         const li = document.createElement('li');
-        li.className = 'input-container flexdatalist-multiple-value';
+        li.className = classes.inputContainer + ' ' + classes.multipleValue;
         li.appendChild(alias);
         ul.appendChild(li);
 
@@ -864,12 +946,12 @@ class Flexdatalist {
         const alias = this._alias;
 
         alias.addEventListener('focusin', () => {
-            this._multipleEl?.classList.add('focus');
+            this._multipleEl?.classList.add(this._classes.multipleFocus);
             this._actAddValueOnLeave();
         });
 
         alias.addEventListener('focusout', () => {
-            this._multipleEl?.classList.remove('focus');
+            this._multipleEl?.classList.remove(this._classes.multipleFocus);
             this._actClearText();
             this._actClearValue();
         });
@@ -901,25 +983,35 @@ class Flexdatalist {
 
         // Close results when clicking outside (skipped for custom containers).
         document.addEventListener('mouseup', e => {
-            const container = document.querySelector('.flexdatalist-results');
-            if (!container || container._fdCustom) {
-                return;
+            for (const fd of Flexdatalist.#instances.values()) {
+                const container = fd?._resultsEl;
+                if (!container || !document.contains(container) || container._fdCustom) {
+                    continue;
+                }
+                const target = container._fdTarget;
+                if (target && target === document.activeElement) continue;
+                if (!container.contains(e.target) && container !== e.target) {
+                    container.remove();
+                    if (fd._resultsEl === container) fd._resultsEl = null;
+                }
             }
-            const target = container._fdTarget;
-            if (target && target === document.activeElement) return;
-            if (!container.contains(e.target) && container !== e.target) container.remove();
         });
 
         // Arrow key navigation + Enter/Escape.
         document.addEventListener('keydown', e => {
-            const container = document.querySelector('.flexdatalist-results');
-            if (!container) {
-                return;
+            const activeEl = document.activeElement;
+            let fd = null;
+            for (const inst of Flexdatalist.#instances.values()) {
+                if (!inst?._resultsEl || !document.contains(inst._resultsEl)) continue;
+                if (activeEl === inst._alias || (inst._multipleEl && inst._multipleEl.contains(activeEl))) {
+                    fd = inst;
+                    break;
+                }
             }
+            if (!fd) return;
 
-            const input = container._fdInput;
-            const fd = input ? Flexdatalist.getInstance(input) : null;
-            const panel = fd ? fd._getActivePanel(container) : container;
+            const container = fd._resultsEl;
+            const panel = fd._getActivePanel(container) ?? container;
             const items = [...panel.querySelectorAll('li.item')];
             if (!items.length) {
                 return;
@@ -928,12 +1020,22 @@ class Flexdatalist {
             const key = e.key;
             const custom = container._fdCustom;
 
-            if (key === 'Escape') { if (!custom) container.remove(); return; }
+            if (key === 'Escape') {
+                if (!custom) {
+                    container.remove();
+                    if (fd._resultsEl === container) fd._resultsEl = null;
+                }
+                return;
+            }
 
             if (key === 'Enter') {
                 const active = panel.querySelector('li.item.active');
                 if (active) { e.preventDefault(); active.click(); }
-                else if (!custom) { e.preventDefault(); container.remove(); }
+                else if (!custom) {
+                    e.preventDefault();
+                    container.remove();
+                    if (fd._resultsEl === container) fd._resultsEl = null;
+                }
                 return;
             }
 
@@ -955,12 +1057,13 @@ class Flexdatalist {
         // Restore display text after bfcache navigation (browser back/forward).
         window.addEventListener('pageshow', e => {
             if (!e.persisted) return;
-            document.querySelectorAll('input.flexdatalist-set').forEach(el => {
-                const fd = Flexdatalist.getInstance(el);
-                const aliasId = el.id ? el.id + '-flexdatalist' : '';
-                const alias = aliasId ? document.getElementById(aliasId) : null;
-                if (fd && el.value && (!alias || !alias.value)) fd.setValue(el.value);
-            });
+            for (const fd of Flexdatalist.#instances.values()) {
+                const el = fd?._hiddenInput;
+                const alias = fd?._alias;
+                if (el && alias && el.value && !alias.value) {
+                    fd.setValue(el.value);
+                }
+            }
         });
 
         // Auto-init on page load (same behaviour as the jQuery plugin).
@@ -990,7 +1093,8 @@ class Flexdatalist {
 
         // Prevent form submission when Enter is pressed with no results.
         if (o.multiple && this._alias.value.length > 0 && key === 'Enter') {
-            if (!document.querySelectorAll('.flexdatalist-results li:not(.no-results)').length) {
+            const container = this._resultsEl;
+            if (!container || !container.querySelector('li:not(.no-results)')) {
                 e.preventDefault();
             }
         }
@@ -1008,7 +1112,9 @@ class Flexdatalist {
         let ignoreEnter = false;
 
         if (o.multiple && this._alias.value.length > 0 && key === 'Enter') {
-            if (!document.querySelector('.flexdatalist-results li.item.active')) {
+            const container = this._resultsEl;
+            const panel = container ? (this._getActivePanel(container) ?? container) : null;
+            if (!panel?.querySelector('li.item.active')) {
                 if (!o.selectionRequired) this._actKeypressValue(e, 'Enter');
                 ignoreEnter = true;
             }
@@ -1176,7 +1282,7 @@ class Flexdatalist {
                 this._multipleRemove(toRemove.dataset.value);
                 this._alias._fdRemove = null;
             } else {
-                const ic = this._multipleEl?.querySelector('li.input-container');
+                const ic = this._multipleEl?.querySelector('li.' + this._classes.inputContainer);
                 this._alias._fdRemove = ic?.previousElementSibling ?? null;
             }
         } else {
@@ -1561,7 +1667,7 @@ class Flexdatalist {
         const li = this._multipleMakeLi(val, txt);
 
         li.addEventListener('click', () => this._multipleToggle(li));
-        li.querySelector('.fdl-remove')?.addEventListener('click', e => {
+        li.querySelector('.' + this._classes.remove)?.addEventListener('click', e => {
             e.stopPropagation();
             this._multipleRemove(li.dataset.value);
         });
@@ -1600,14 +1706,15 @@ class Flexdatalist {
             return;
         }
 
-        const action = li.classList.contains('disabled') ? 'enable' : 'disable';
+        const classes = this._classes;
+        const action = li.classList.contains(classes.disabled) ? 'enable' : 'disable';
         const togglePayload = { value: li.dataset.value, text: li.dataset.text, action };
         this._dispatch('before:flexdatalist.toggle', togglePayload);
 
-        li.classList.toggle('disabled', action === 'disable');
+        li.classList.toggle(classes.disabled, action === 'disable');
 
         this._value = this._toStr(
-            [...this._multipleEl.querySelectorAll('li.toggle:not(.disabled)')].map(l => l.dataset.value)
+            [...this._multipleEl.querySelectorAll(`li.${classes.valueToggle}:not(.${classes.disabled})`)].map(l => l.dataset.value)
         );
         this._hiddenInput.value = this._value;
 
@@ -1675,23 +1782,24 @@ class Flexdatalist {
      */
     _multipleMakeLi(val, txt) {
         const o = this._options;
+        const classes = this._classes;
         const li = document.createElement('li');
-        li.className = 'value' + (o.toggleSelected ? ' toggle' : '');
+        li.className = classes.value + (o.toggleSelected ? ' ' + classes.valueToggle : '');
         li.dataset.text  = txt;
         li.dataset.value = this._toStr(val);
 
         const span = document.createElement('span');
-        span.className = 'text';
+        span.className = classes.valueText;
         span.textContent = txt;
 
         const rm = document.createElement('span');
-        rm.className = 'fdl-remove';
+        rm.className = classes.remove;
         rm.innerHTML = '&times;';
 
         li.appendChild(span);
         li.appendChild(rm);
 
-        const ic = this._multipleEl.querySelector('li.input-container');
+        const ic = this._multipleEl.querySelector('li.' + classes.inputContainer);
         this._multipleEl.insertBefore(li, ic);
         return li;
     }
@@ -1704,7 +1812,7 @@ class Flexdatalist {
     _multipleHandleLimit() {
         if (!this._multipleEl) return;
         const limit = this._options.limitOfValues;
-        const ic = this._multipleEl.querySelector('li.input-container');
+        const ic = this._multipleEl.querySelector('li.' + this._classes.inputContainer);
         if (ic) ic.style.display = (limit > 0 && this._texts.length >= limit) ? 'none' : '';
     }
 
@@ -1728,23 +1836,24 @@ class Flexdatalist {
      */
     _multipleCollapse() {
         const o = this._options;
+        const classes = this._classes;
         if (o.collapseAfterN === false) return;
-        const items = [...this._multipleEl.querySelectorAll('li.value')];
+        const items = [...this._multipleEl.querySelectorAll('li.' + classes.value)];
         if (items.length <= o.collapseAfterN) return;
 
         this._multipleExpand(); // reset first
 
         items.forEach((item, i) => {
-            if (i + 1 > o.collapseAfterN) item.classList.add('flexdatalist-collapsed-item');
+            if (i + 1 > o.collapseAfterN) item.classList.add(classes.collapsedItem);
         });
 
-        const count = this._multipleEl.querySelectorAll('li.flexdatalist-collapsed-item').length;
+        const count = this._multipleEl.querySelectorAll('li.' + classes.collapsedItem).length;
         const ctrl = document.createElement('li');
-        ctrl.className = 'flexdatalist-collapsed-control';
+        ctrl.className = classes.collapsedControl;
         ctrl.textContent = o.collapsedValuesText.replace('{count}', count);
         ctrl.addEventListener('click', () => this._multipleExpand());
 
-        const ic = this._multipleEl.querySelector('li.input-container');
+        const ic = this._multipleEl.querySelector('li.' + classes.inputContainer);
         this._multipleEl.insertBefore(ctrl, ic);
     }
 
@@ -1755,9 +1864,10 @@ class Flexdatalist {
      */
     _multipleExpand() {
         if (!this._multipleEl) return;
-        this._multipleEl.querySelectorAll('li.flexdatalist-collapsed-item')
-            .forEach(l => l.classList.remove('flexdatalist-collapsed-item'));
-        this._multipleEl.querySelector('li.flexdatalist-collapsed-control')?.remove();
+        const classes = this._classes;
+        this._multipleEl.querySelectorAll('li.' + classes.collapsedItem)
+            .forEach(l => l.classList.remove(classes.collapsedItem));
+        this._multipleEl.querySelector('li.' + classes.collapsedControl)?.remove();
     }
 
     // =========================================================================
@@ -1889,7 +1999,8 @@ class Flexdatalist {
     _request(settings) {
         const o = this._options;
         const el = this._hiddenInput;
-        if (el.classList.contains('flexdatalist-loading')) {
+        const classes = this._classes;
+        if (el.classList.contains(classes.loading)) {
             // A fetch is already in-flight. Save this request as pending so its
             // callback is not silently dropped (e.g. init value-load vs. a fast
             // server that triggers a second _dataLoad before the first resolves).
@@ -1897,7 +2008,7 @@ class Flexdatalist {
             return;
         }
         this._pendingRequest = null;
-        el.classList.add('flexdatalist-loading');
+        el.classList.add(classes.loading);
 
         let url = settings.url;
         const fetchOpts = {
@@ -1932,7 +2043,7 @@ class Flexdatalist {
                 }
             })
             .finally(() => {
-                el.classList.remove('flexdatalist-loading');
+                el.classList.remove(classes.loading);
                 // If a request arrived while this one was in-flight, run it now.
                 if (this._pendingRequest) {
                     const pending = this._pendingRequest;
@@ -1990,9 +2101,10 @@ class Flexdatalist {
      */
     _loadingStart() {
         const target = this._multipleEl ?? this._alias;
-        target.classList.add('flexdatalist-fetching');
+        const classes = this._classes;
+        target.classList.add(classes.fetching);
         const anim = document.createElement('div');
-        anim.className = 'flexdatalist-fetch-animation';
+        anim.className = classes.fetchAnimation;
         anim._fdTarget = target;
         document.body.appendChild(anim);
         this._position(anim, target);
@@ -2004,7 +2116,7 @@ class Flexdatalist {
      * @private
      */
     _loadingStop() {
-        document.querySelectorAll('.flexdatalist-fetch-animation').forEach(el => el.remove());
+        document.querySelectorAll('.' + this._classes.fetchAnimation).forEach(el => el.remove());
     }
 
     // =========================================================================
@@ -2227,17 +2339,19 @@ class Flexdatalist {
                 // headers (default) + tabs single-group fallback
                 container = this._resultsContainer();
                 for (const [groupName, items] of Object.entries(grouped)) {
+                    const classes = this._classes;
                     const groupText = this._hlProp(items[0], o.groupBy, groupName);
                     const li = document.createElement('li');
-                    li.className = 'group';
-                    li.innerHTML = `<span class="group-name">${groupText}</span><span class="group-item-count"> ${items.length}</span>`;
+                    li.className = classes.group;
+                    li.innerHTML = `<span class="${classes.groupName}">${groupText}</span><span class="${classes.groupItemCount}"> ${items.length}</span>`;
                     container.appendChild(li);
                     this._renderItems(items, container);
                 }
             }
         }
 
-        const liItems = [...container.querySelectorAll('li.item')];
+        const classes = this._classes;
+        const liItems = [...container.querySelectorAll('li.' + classes.item)];
         for (const li of liItems) {
             li.addEventListener('click', () => {
                 const item = li._fdItem;
@@ -2253,14 +2367,14 @@ class Flexdatalist {
             });
             li.addEventListener('mouseenter', () => {
                 const host = li.closest('ul') ?? container;
-                [...host.querySelectorAll('li.item.active')].forEach(l => l.classList.remove('active'));
-                li.classList.add('active');
+                [...host.querySelectorAll(`li.${classes.item}.${classes.active}`)].forEach(l => l.classList.remove(classes.active));
+                li.classList.add(classes.active);
                 li.dispatchEvent(new CustomEvent('active:flexdatalist.results', { detail: li._fdItem }));
             });
-            li.addEventListener('mouseleave', () => li.classList.remove('active'));
+            li.addEventListener('mouseleave', () => li.classList.remove(classes.active));
         }
 
-        if (o.focusFirstResult) (this._getActivePanel(container) ?? container).querySelector('li.item')?.classList.add('active');
+        if (o.focusFirstResult) (this._getActivePanel(container) ?? container).querySelector('li.' + classes.item)?.classList.add(classes.active);
     }
 
     /**
@@ -2279,16 +2393,18 @@ class Flexdatalist {
 
         if (o.showAddNewItem && kw.length > 0) {
             const li = document.createElement('li');
-            li.className = 'item no-results add-new-item';
+            const classes = this._classes;
+            li.className = `${classes.item} ${classes.noResults} ${classes.addNewItem}`;
             li.innerHTML = o.addNewItemText.replace('{keyword}', this._escape(kw));
             li._fdItem = { isAddNew: true, keyword: kw };
             container.appendChild(li);
             li.addEventListener('click', () => { this._resultsRemove(); this._dispatch('addnew:flexdatalist', kw); });
-            li.addEventListener('mouseenter', () => li.classList.add('active'));
-            li.addEventListener('mouseleave', () => li.classList.remove('active'));
+            li.addEventListener('mouseenter', () => li.classList.add(classes.active));
+            li.addEventListener('mouseleave', () => li.classList.remove(classes.active));
         } else {
             const li = document.createElement('li');
-            li.className = 'item no-results';
+            const classes = this._classes;
+            li.className = `${classes.item} ${classes.noResults}`;
             li.textContent = text.replace('{keyword}', kw);
             container.appendChild(li);
         }
@@ -2326,8 +2442,9 @@ class Flexdatalist {
      */
     _makeItem(item, idx, total) {
         const o  = this._options;
+        const classes = this._classes;
         const li = document.createElement('li');
-        li.className = 'item';
+        li.className = classes.item;
         li.setAttribute('role', 'option');
         li.setAttribute('tabindex', '-1');
         li.setAttribute('aria-posinset', idx + 1);
@@ -2372,11 +2489,12 @@ class Flexdatalist {
      * @returns {HTMLElement|null}
      */
     _getActivePanel(containerEl) {
-        containerEl = containerEl ?? document.querySelector('.flexdatalist-results');
+        containerEl = containerEl ?? this._resultsEl;
         if (!containerEl) return null;
         if (containerEl.tagName === 'UL') return containerEl;
-        return containerEl.querySelector('ul.fdl-group-panel:not([hidden])')
-            ?? containerEl.querySelector('ul.fdl-group-panel')
+        const classes = this._classes;
+        return containerEl.querySelector(`ul.${classes.groupPanel}:not([hidden])`)
+            ?? containerEl.querySelector('ul.' + classes.groupPanel)
             ?? containerEl;
     }
 
@@ -2391,12 +2509,13 @@ class Flexdatalist {
      */
     _resultsContainer(opts = {}) {
         const { tabs = false } = opts;
+        const classes = this._classes;
         if (this._customContainer) {
             const el = this._customContainer;
-            if (!el.classList.contains('flexdatalist-results')) {
-                el.classList.add('flexdatalist-results');
+            if (!el.classList.contains(classes.results)) {
+                el.classList.add(classes.results);
             }
-            el.classList.toggle('fdl-tabs', tabs);
+            el.classList.toggle(classes.tabs, tabs);
             if (tabs) {
                 el.removeAttribute('role');
             } else {
@@ -2404,14 +2523,16 @@ class Flexdatalist {
             }
             el._fdTarget = this._multipleEl ?? this._alias;
             el._fdInput = this._hiddenInput;
+            this._resultsEl = el;
             return el;
         }
 
-        let container = document.querySelector('.flexdatalist-results');
-        if (container) {
-            const isTabs = container.classList.contains('fdl-tabs');
+        let container = this._resultsEl;
+        if (container && document.contains(container)) {
+            const isTabs = container.classList.contains(classes.tabs);
             if (tabs !== isTabs) {
                 container.remove();
+                this._resultsEl = null;
             } else {
                 return container;
             }
@@ -2422,7 +2543,7 @@ class Flexdatalist {
         const parent = target.closest('dialog') ?? document.body;
 
         container = document.createElement(tabs ? 'div' : 'ul');
-        container.className = 'flexdatalist-results' + (tabs ? ' fdl-tabs' : '');
+        container.className = classes.results + (tabs ? ' ' + classes.tabs : '');
         container.id = this._alias.id + '-results';
         if (!tabs) {
             container.setAttribute('role', 'listbox');
@@ -2436,6 +2557,7 @@ class Flexdatalist {
 
         parent.appendChild(container);
         this._position(container, target);
+        this._resultsEl = container;
         return container;
     }
 
@@ -2471,6 +2593,7 @@ class Flexdatalist {
     _renderGroupedTabs(grouped, containerEl) {
         containerEl.replaceChildren();
 
+        const classes = this._classes;
         const groupBy = this._options.groupBy;
         const groupNames = Object.keys(grouped);
         const baseId = this._alias.id + '-tabs';
@@ -2480,11 +2603,11 @@ class Flexdatalist {
         containerEl.dataset.fdlActiveTabIdx = '-1';
 
         const tablist = document.createElement('div');
-        tablist.className = 'fdl-group-tabs';
+        tablist.className = classes.groupTabs;
         tablist.setAttribute('role', 'tablist');
 
         const panelsWrap = document.createElement('div');
-        panelsWrap.className = 'fdl-group-panels';
+        panelsWrap.className = classes.groupPanels;
 
         const tabs = [];
         const panels = [];
@@ -2503,7 +2626,7 @@ class Flexdatalist {
 
             tabs.forEach((t, i) => {
                 const active = i === nextIdx;
-                t.classList.toggle('is-active', active);
+                t.classList.toggle(classes.isActive, active);
                 t.setAttribute('aria-selected', active ? 'true' : 'false');
                 t.tabIndex = active ? 0 : -1;
             });
@@ -2514,7 +2637,7 @@ class Flexdatalist {
                     const active = i === nextIdx;
                     p.hidden = !active;
                     p.setAttribute('aria-hidden', active ? 'false' : 'true');
-                    p.classList.toggle('is-active', active);
+                    p.classList.toggle(classes.isActive, active);
                 });
                 containerEl.dataset.fdlActiveTabIdx = String(nextIdx);
                 if (focusTab) tabs[nextIdx]?.focus();
@@ -2527,8 +2650,8 @@ class Flexdatalist {
             nextPanel.hidden = false;
             nextPanel.setAttribute('aria-hidden', 'false');
 
-            nextPanel.classList.add('is-animating');
-            prevPanel.classList.add('is-animating');
+            nextPanel.classList.add(classes.isAnimating);
+            prevPanel.classList.add(classes.isAnimating);
 
             nextPanel.style.transform = `translateX(${dir * 100}%)`;
             prevPanel.style.transform = 'translateX(0%)';
@@ -2548,8 +2671,8 @@ class Flexdatalist {
                     const active = i === nextIdx;
                     p.hidden = !active;
                     p.setAttribute('aria-hidden', active ? 'false' : 'true');
-                    p.classList.toggle('is-active', active);
-                    p.classList.remove('is-animating');
+                    p.classList.toggle(classes.isActive, active);
+                    p.classList.remove(classes.isAnimating);
                     p.style.transform = '';
                 });
 
@@ -2568,20 +2691,20 @@ class Flexdatalist {
 
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'fdl-group-tab';
+            btn.className = classes.groupTab;
             btn.id = tabId;
             btn.setAttribute('role', 'tab');
             btn.setAttribute('aria-controls', panelId);
             btn.setAttribute('aria-selected', idx === 0 ? 'true' : 'false');
             btn.tabIndex = idx === 0 ? 0 : -1;
             btn.dataset.index = String(idx);
-            btn.innerHTML = `<span class="fdl-group-tab-name">${groupText}</span><span class="fdl-group-tab-count">${items.length}</span>`;
+            btn.innerHTML = `<span class="${classes.groupTabName}">${groupText}</span><span class="${classes.groupTabCount}">${items.length}</span>`;
             btn.addEventListener('click', () => setActive(idx, { focusTab: false }));
             tabs.push(btn);
             tablist.appendChild(btn);
 
             const panel = document.createElement('ul');
-            panel.className = 'fdl-group-panel' + (idx === 0 ? ' is-active' : '');
+            panel.className = classes.groupPanel + (idx === 0 ? ' ' + classes.isActive : '');
             panel.id = panelId;
             panel.setAttribute('role', 'tabpanel');
             panel.setAttribute('aria-labelledby', tabId);
@@ -2615,10 +2738,10 @@ class Flexdatalist {
 
         if (this._options.groupTabAnimation) {
             // Restart enter animation each time results open.
-            tablist.classList.remove('fdl-group-tabs-enter');
+            tablist.classList.remove(classes.groupTabsEnter);
             // Force reflow so re-adding the class retriggers keyframes.
             tablist.getBoundingClientRect();
-            tablist.classList.add('fdl-group-tabs-enter');
+            tablist.classList.add(classes.groupTabsEnter);
         }
 
         setActive(0, { focusTab: false });
@@ -2649,14 +2772,15 @@ class Flexdatalist {
      */
     _resultsLoadingStart() {
         const o = this._options;
-        if (!o.resultsLoader || document.querySelector('.flexdatalist-fetching-results')) {
+        const classes = this._classes;
+        if (!o.resultsLoader || this._resultsEl?.classList.contains(classes.resultsFetching)) {
             return;
         }
         this._resultsRemove();
         const ul = this._resultsContainer();
-        ul.classList.replace('flexdatalist-results', 'flexdatalist-fetching-results');
+        ul.classList.replace(classes.results, classes.resultsFetching);
         const li  = document.createElement('li');
-        li.className = 'flexdatalist-fetching-results-loader';
+        li.className = classes.resultsLoaderItem;
         const img = document.createElement('img');
         img.src = o.resultsLoader;
         img.alt = '';
@@ -2672,12 +2796,14 @@ class Flexdatalist {
      * @private
      */
     _resultsLoadingStop() {
+        const classes = this._classes;
         if (this._customContainer) {
             this._customContainer.replaceChildren();
-            this._customContainer.classList.remove('flexdatalist-fetching-results');
-            this._customContainer.classList.add('flexdatalist-results');
+            this._customContainer.classList.remove(classes.resultsFetching);
+            this._customContainer.classList.add(classes.results);
         } else {
-            document.querySelectorAll('.flexdatalist-fetching-results').forEach(el => el.remove());
+            this._resultsEl?.remove();
+            this._resultsEl = null;
         }
     }
 
@@ -2694,8 +2820,13 @@ class Flexdatalist {
         if (this._customContainer) {
             this._customContainer.replaceChildren();
         } else {
-            document.querySelectorAll(itemsOnly ? '.flexdatalist-results li' : '.flexdatalist-results')
-                .forEach(el => el.remove());
+            const container = this._resultsEl;
+            if (itemsOnly) {
+                container?.replaceChildren();
+            } else {
+                container?.remove();
+                this._resultsEl = null;
+            }
         }
         this._dispatch('removed:flexdatalist.results');
     }
@@ -2713,7 +2844,7 @@ class Flexdatalist {
      * @param {HTMLElement} [target]     Defaults to `container._fdTarget`.
      */
     _position(container, target) {
-        container = container ?? document.querySelector('.flexdatalist-results');
+        container = container ?? this._resultsEl;
         if (!container || container._fdCustom) {
             return;
         }
@@ -2765,9 +2896,10 @@ class Flexdatalist {
         this._alias.disabled = disabled;
 
         if (this._multipleEl) {
-            const btns = this._multipleEl.querySelectorAll('li .fdl-remove');
-            const ic = this._multipleEl.querySelector('li.input-container');
-            this._multipleEl.classList.toggle('disabled', disabled);
+            const classes = this._classes;
+            const btns = this._multipleEl.querySelectorAll('li .' + classes.remove);
+            const ic = this._multipleEl.querySelector('li.' + classes.inputContainer);
+            this._multipleEl.classList.toggle(classes.disabled, disabled);
             btns.forEach(b => { b.style.display = disabled ? 'none' : ''; });
             if (ic) {
                 ic.style.display = disabled ? 'none' : '';
@@ -2795,9 +2927,10 @@ class Flexdatalist {
         this._alias.readOnly = ro;
 
         if (this._multipleEl) {
-            const btns = this._multipleEl.querySelectorAll('li .fdl-remove');
-            const ic = this._multipleEl.querySelector('li.input-container');
-            this._multipleEl.classList.toggle('disabled', ro);
+            const classes = this._classes;
+            const btns = this._multipleEl.querySelectorAll('li .' + classes.remove);
+            const ic = this._multipleEl.querySelector('li.' + classes.inputContainer);
+            this._multipleEl.classList.toggle(classes.disabled, ro);
             btns.forEach(b => {
                 b.style.display = ro ? 'none' : '';
             });
