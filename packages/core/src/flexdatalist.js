@@ -2932,7 +2932,11 @@ class Flexdatalist {
             this._multipleEl.classList.toggle(classes.disabled, disabled);
             btns.forEach(b => { b.style.display = disabled ? 'none' : ''; });
             if (ic) {
-                ic.style.display = disabled ? 'none' : '';
+                if (disabled) {
+                    ic.style.display = 'none';
+                } else {
+                    this._multipleHandleLimit();
+                }
             }
         }
 
@@ -2965,7 +2969,11 @@ class Flexdatalist {
                 b.style.display = ro ? 'none' : '';
             });
             if (ic) {
-                ic.style.display = ro ? 'none' : '';
+                if (ro) {
+                    ic.style.display = 'none';
+                } else {
+                    this._multipleHandleLimit();
+                }
             }
         }
 
