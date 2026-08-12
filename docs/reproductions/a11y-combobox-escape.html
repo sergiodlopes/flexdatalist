@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flexdatalist 3.1.1 Accessibility Reproduction</title>
+    <link rel="stylesheet" href="https://unpkg.com/flexdatalist@3.1.1/dist/flexdatalist.css">
+    <style>
+        body {
+            max-width: 42rem;
+            margin: 3rem auto;
+            padding: 0 1.5rem;
+            color: #1f2937;
+            font-family: Georgia, serif;
+            line-height: 1.5;
+        }
+
+        label,
+        input {
+            display: block;
+        }
+
+        label {
+            margin-bottom: 0.4rem;
+            font-weight: 700;
+        }
+
+        input {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            border: 1px solid #6b7280;
+            border-radius: 4px;
+            font: inherit;
+        }
+
+        output {
+            display: block;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-left: 4px solid #0f766e;
+            background: #f0fdfa;
+            font-family: Consolas, monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Flexdatalist 3.1.1 Accessibility Reproduction</h1>
+        <p>This page deliberately loads the published 3.1.1 bundle from unpkg, not the local source.</p>
+
+        <ol>
+            <li>Type <code>lo</code> and wait for the suggestions.</li>
+            <li>Use ArrowDown to select an option, then inspect the state below.</li>
+            <li>Press Escape and wait at least 400 ms. The popup closes, then reopens in 3.1.1.</li>
+        </ol>
+
+        <label for="city">City</label>
+        <input id="city" type="text" autocomplete="off">
+        <output id="state" aria-live="polite">Loading released bundle...</output>
+    </main>
+
+    <script src="https://unpkg.com/flexdatalist@3.1.1/dist/flexdatalist.umd.js"></script>
+    <script>
+        const state = document.getElementById('state');
+        const FlexdatalistClass = window.Flexdatalist.Flexdatalist ?? window.Flexdatalist.default;
+
+        FlexdatalistClass.init('#city', {
+            data: [
+                { label: 'London' },
+                { label: 'Los Angeles' },
+                { label: 'Lodz' },
+                { label: 'Lisbon' },
+                { label: 'Paris' },
+            ],
+            minLength: 1,
+            searchDelay: 300,
+        }).then(([instance]) => {
+            const alias = instance._alias;
+
+            const updateState = () => {
+                const popup = document.getElementById(alias.id + '-results');
+                state.textContent = [
+                    `role: ${alias.getAttribute('role') || '(missing)'}`,
+                    `aria-expanded: ${alias.getAttribute('aria-expanded') || '(missing)'}`,
+                    `aria-activedescendant: ${alias.getAttribute('aria-activedescendant') || '(missing)'}`,
+                    `popup visible: ${Boolean(popup?.isConnected)}`,
+                ].join('\n');
+            };
+
+            const observer = new MutationObserver(mutations => {
+                const tracksWidgetChange = mutations.some(mutation => (
+                    mutation.target !== state && !state.contains(mutation.target)
+                ));
+                if (tracksWidgetChange) updateState();
+            });
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['aria-activedescendant', 'aria-expanded', 'class'],
+            });
+            updateState();
+        });
+    </script>
+</body>
+</html>

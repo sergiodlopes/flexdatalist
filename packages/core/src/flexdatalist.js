@@ -284,6 +284,9 @@ class Flexdatalist {
         /** @type {HTMLElement|null} Currently-open results container for this instance. */
         this._resultsEl = null;
 
+        /** @type {number} Sequence used to generate unique option IDs for each render. */
+        this._resultItemIndex = 0;
+
         /** @type {string} Internal serialised value string. */
         this._value = el.value || '';
 
@@ -797,6 +800,7 @@ class Flexdatalist {
         }
 
         this._resultsEl = null;
+        this._setResultsExpanded(false);
 
         // @ts-ignore
         Flexdatalist.#instances.delete(el);
@@ -906,9 +910,43 @@ class Flexdatalist {
      * @param {HTMLInputElement} alias
      */
     _setA11y(alias) {
+        const resultsId = this._customContainer?.id || alias.id + '-results';
+        if (this._customContainer && !this._customContainer.id) {
+            this._customContainer.id = resultsId;
+        }
+        alias.setAttribute('role', 'combobox');
         alias.setAttribute('aria-autocomplete', 'list');
         alias.setAttribute('aria-expanded', 'false');
-        alias.setAttribute('aria-owns', alias.id + '-results');
+        alias.setAttribute('aria-owns', resultsId);
+        alias.setAttribute('aria-controls', resultsId);
+    }
+
+    /**
+     * Update combobox expansion state and clear its active option when closed.
+     *
+     * @private
+     * @param {boolean} expanded
+     */
+    _setResultsExpanded(expanded) {
+        this._alias.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        if (!expanded) this._setActiveDescendant(null);
+    }
+
+    /**
+     * Update the active option exposed from the combobox input.
+     *
+     * @private
+     * @param {HTMLLIElement|null} li
+     */
+    _setActiveDescendant(li) {
+        const activeId = this._alias.getAttribute('aria-activedescendant');
+        if (activeId) document.getElementById(activeId)?.setAttribute('aria-selected', 'false');
+        if (li) {
+            li.setAttribute('aria-selected', 'true');
+            this._alias.setAttribute('aria-activedescendant', li.id);
+        } else {
+            this._alias.removeAttribute('aria-activedescendant');
+        }
     }
 
     /**
@@ -987,8 +1025,7 @@ class Flexdatalist {
                 const target = container._fdTarget;
                 if (target && target === document.activeElement) continue;
                 if (!container.contains(e.target) && container !== e.target) {
-                    container.remove();
-                    if (fd._resultsEl === container) fd._resultsEl = null;
+                    fd._resultsRemove();
                 }
             }
         });
@@ -1032,19 +1069,18 @@ class Flexdatalist {
                 }
             }
 
-            const panel = fd._getActivePanel(container) ?? container;
-            const items = [...panel.querySelectorAll('li.item')];
-            if (!items.length) {
-                return;
-            }
-
             const custom = container._fdCustom;
 
             if (key === 'Escape') {
                 if (!custom) {
-                    container.remove();
-                    if (fd._resultsEl === container) fd._resultsEl = null;
+                    fd._resultsRemove();
                 }
+                return;
+            }
+
+            const panel = fd._getActivePanel(container) ?? container;
+            const items = [...panel.querySelectorAll('li.item')];
+            if (!items.length) {
                 return;
             }
 
@@ -1053,8 +1089,7 @@ class Flexdatalist {
                 if (active) { e.preventDefault(); active.click(); }
                 else if (!custom) {
                     e.preventDefault();
-                    container.remove();
-                    if (fd._resultsEl === container) fd._resultsEl = null;
+                    fd._resultsRemove();
                 }
                 return;
             }
@@ -1071,6 +1106,7 @@ class Flexdatalist {
 
                 next?.classList.add('active');
                 if (next) panel.scrollTop = next.offsetTop;
+                fd._setActiveDescendant(next ?? null);
             }
         });
 
@@ -1255,8 +1291,9 @@ class Flexdatalist {
         this._fetchDisabled = false;
         clearTimeout(this._searchTimeout);
 
-        // Ignore navigation keys (arrows, enter).
-        const navKeys = ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+        // Ignore navigation keys (arrows, enter, escape — Escape dismisses the
+        // list and must not re-arm a search that would reopen it).
+        const navKeys = ['Enter', 'Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
         if (!key || !navKeys.includes(key)) {
             this._searchTimeout = setTimeout(() => {
                 const len = kw.length;
@@ -2332,6 +2369,7 @@ class Flexdatalist {
      */
     _resultsShow(results) {
         this._resultsRemove(true);
+        this._resultItemIndex = 0;
         if (this._resultsEl) delete this._resultsEl._fdCycleGroupedTab;
         if (!results) {
             return;
@@ -2390,12 +2428,20 @@ class Flexdatalist {
                 const host = li.closest('ul') ?? container;
                 [...host.querySelectorAll(`li.${classes.item}.${classes.active}`)].forEach(l => l.classList.remove(classes.active));
                 li.classList.add(classes.active);
+                this._setActiveDescendant(li);
                 li.dispatchEvent(new CustomEvent('active:flexdatalist.results', { detail: li._fdItem }));
             });
-            li.addEventListener('mouseleave', () => li.classList.remove(classes.active));
+            li.addEventListener('mouseleave', () => {
+                li.classList.remove(classes.active);
+                if (this._alias.getAttribute('aria-activedescendant') === li.id) this._setActiveDescendant(null);
+            });
         }
 
-        if (o.focusFirstResult) (this._getActivePanel(container) ?? container).querySelector('li.' + classes.item)?.classList.add(classes.active);
+        if (o.focusFirstResult) {
+            const first = (this._getActivePanel(container) ?? container).querySelector('li.' + classes.item);
+            first?.classList.add(classes.active);
+            this._setActiveDescendant(first ?? null);
+        }
     }
 
     /**
@@ -2416,16 +2462,30 @@ class Flexdatalist {
             const li = document.createElement('li');
             const classes = this._classes;
             li.className = `${classes.item} ${classes.noResults} ${classes.addNewItem}`;
+            li.id = this._alias.id + '-option-' + this._resultItemIndex++;
+            li.setAttribute('role', 'option');
+            li.setAttribute('tabindex', '-1');
+            li.setAttribute('aria-selected', 'false');
             li.innerHTML = o.addNewItemText.replace('{keyword}', this._escape(kw));
             li._fdItem = { isAddNew: true, keyword: kw };
             container.appendChild(li);
             li.addEventListener('click', () => { this._resultsRemove(); this._dispatch('addnew:flexdatalist', kw); });
-            li.addEventListener('mouseenter', () => li.classList.add(classes.active));
-            li.addEventListener('mouseleave', () => li.classList.remove(classes.active));
+            li.addEventListener('mouseenter', () => {
+                li.classList.add(classes.active);
+                this._setActiveDescendant(li);
+            });
+            li.addEventListener('mouseleave', () => {
+                li.classList.remove(classes.active);
+                if (this._alias.getAttribute('aria-activedescendant') === li.id) this._setActiveDescendant(null);
+            });
         } else {
             const li = document.createElement('li');
             const classes = this._classes;
             li.className = `${classes.item} ${classes.noResults}`;
+            li.id = this._alias.id + '-option-' + this._resultItemIndex++;
+            li.setAttribute('role', 'option');
+            li.setAttribute('tabindex', '-1');
+            li.setAttribute('aria-selected', 'false');
             li.textContent = text.replace('{keyword}', kw);
             container.appendChild(li);
         }
@@ -2466,10 +2526,12 @@ class Flexdatalist {
         const classes = this._classes;
         const li = document.createElement('li');
         li.className = classes.item;
+        li.id = this._alias.id + '-option-' + this._resultItemIndex++;
         li.setAttribute('role', 'option');
         li.setAttribute('tabindex', '-1');
         li.setAttribute('aria-posinset', idx + 1);
         li.setAttribute('aria-setsize', total);
+        li.setAttribute('aria-selected', 'false');
         li._fdItem = item;
 
         for (const vp of o.visibleProperties) {
@@ -2545,6 +2607,7 @@ class Flexdatalist {
             el._fdTarget = this._multipleEl ?? this._alias;
             el._fdInput = this._hiddenInput;
             this._resultsEl = el;
+            this._setResultsExpanded(true);
             return el;
         }
 
@@ -2554,6 +2617,7 @@ class Flexdatalist {
             if (tabs !== isTabs) {
                 container.remove();
                 this._resultsEl = null;
+                this._setResultsExpanded(false);
             } else {
                 return container;
             }
@@ -2579,6 +2643,7 @@ class Flexdatalist {
         parent.appendChild(container);
         this._position(container, target);
         this._resultsEl = container;
+        this._setResultsExpanded(true);
         return container;
     }
 
@@ -2641,6 +2706,7 @@ class Flexdatalist {
                 return;
             }
 
+            this._setActiveDescendant(null);
             const prevPanel = panels[prevIdx];
             const nextPanel = panels[nextIdx];
             const dir = nextIdx > prevIdx ? 1 : -1;
@@ -2835,6 +2901,7 @@ class Flexdatalist {
             this._resultsEl?.remove();
             this._resultsEl = null;
         }
+        this._setResultsExpanded(false);
     }
 
     /**
@@ -2858,6 +2925,8 @@ class Flexdatalist {
                 this._resultsEl = null;
             }
         }
+        if (itemsOnly) this._setActiveDescendant(null);
+        else this._setResultsExpanded(false);
         this._dispatch('removed:flexdatalist.results');
     }
 
