@@ -33,14 +33,14 @@
   "license": "MIT",
   "homepage": "https://github.com/sergiodlopes/flexdatalist",
   "peerDependencies": {
-    "svelte": "^4 || ^5",
-    "flexdatalist": "^3.0.0"
+    "flexdatalist": "^3.0.0",
+    "svelte": "^4 || ^5"
   },
   "devDependencies": {
-    "svelte": "^5",
+    "@sveltejs/vite-plugin-svelte": "^5.1.1",
     "flexdatalist": "workspace:*",
-    "vite": "^6",
-    "@sveltejs/vite-plugin-svelte": "^5"
+    "svelte": "^5.56.10",
+    "vite": "^6.4.3"
   },
   "scripts": {
     "build": "vite build"

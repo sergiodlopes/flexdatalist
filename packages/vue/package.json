@@ -31,14 +31,14 @@
   "license": "MIT",
   "homepage": "https://github.com/sergiodlopes/flexdatalist",
   "peerDependencies": {
-    "vue": "^3.3",
-    "flexdatalist": "^3.0.0"
+    "flexdatalist": "^3.0.0",
+    "vue": "^3.3"
   },
   "devDependencies": {
-    "vue": "^3.5",
+    "@vitejs/plugin-vue": "^5.2.4",
     "flexdatalist": "workspace:*",
-    "vite": "^6",
-    "@vitejs/plugin-vue": "^5"
+    "vite": "^6.4.3",
+    "vue": "^3.5.41"
   },
   "scripts": {
     "build": "vite build"

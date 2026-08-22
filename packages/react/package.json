@@ -31,16 +31,16 @@
   "license": "MIT",
   "homepage": "https://github.com/sergiodlopes/flexdatalist",
   "peerDependencies": {
+    "flexdatalist": "^3.0.0",
     "react": "^18 || ^19",
-    "react-dom": "^18 || ^19",
-    "flexdatalist": "^3.0.0"
+    "react-dom": "^18 || ^19"
   },
   "devDependencies": {
-    "react": "^19",
-    "react-dom": "^19",
+    "@vitejs/plugin-react": "^4.7.0",
     "flexdatalist": "workspace:*",
-    "vite": "^6",
-    "@vitejs/plugin-react": "^4"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "vite": "^6.4.3"
   },
   "scripts": {
     "build": "vite build"

@@ -293,6 +293,9 @@ class Flexdatalist {
         /** @type {boolean} Whether a result item was just selected (suppresses blur). */
         this._itemSelected = false;
 
+        /** @type {boolean} Whether the user is navigating results via keyboard (vs mouse hover). */
+        this._keyboardNavActive = false;
+
         /** @type {boolean} Prevent fetching while the user is navigating away. */
         this._fetchDisabled = false;
 
@@ -942,6 +945,7 @@ class Flexdatalist {
         const alias = this._alias;
 
         alias.addEventListener('focusin', () => {
+            this._keyboardNavActive = false;
             this._multipleEl?.classList.add(this._classes.multipleFocus);
             this._actAddValueOnLeave();
         });
@@ -987,6 +991,7 @@ class Flexdatalist {
                 const target = container._fdTarget;
                 if (target && target === document.activeElement) continue;
                 if (!container.contains(e.target) && container !== e.target) {
+                    fd._keyboardNavActive = false;
                     container.remove();
                     if (fd._resultsEl === container) fd._resultsEl = null;
                 }
@@ -994,45 +999,60 @@ class Flexdatalist {
         });
 
         // Arrow key navigation + Enter/Escape.
-        document.addEventListener('keydown', e => {
+        document.addEventListener('keydown', event => {
             const activeEl = document.activeElement;
-            let fd = null;
+            let instance = null;
             for (const inst of Flexdatalist.#instances.values()) {
                 if (!inst?._resultsEl || !document.contains(inst._resultsEl)) continue;
-                if (activeEl === inst._alias || (inst._multipleEl && inst._multipleEl.contains(activeEl))) {
-                    fd = inst;
+                if (
+                    activeEl === inst._alias
+                    || (inst._multipleEl && inst._multipleEl.contains(activeEl))
+                    || inst._resultsEl.contains(activeEl)
+                    || inst._keyboardNavActive
+                ) {
+                    instance = inst;
                     break;
                 }
             }
-            if (!fd) return;
+            if (!instance) return;
 
-            const container = fd._resultsEl;
-            const key = e.key;
+            const container = instance._resultsEl;
+            const key = event.key;
 
             if (
                 (key === 'ArrowRight' || key === 'ArrowLeft')
                 && typeof container._fdCycleGroupedTab === 'function'
-                && activeEl === fd._alias
             ) {
-                const alias = fd._alias;
-                const len = alias.value.length;
-                const sel0 = alias.selectionStart ?? 0;
-                const sel1 = alias.selectionEnd ?? 0;
-                const fullRange = len > 0 && sel0 === 0 && sel1 === len;
-                const collapsed = sel0 === sel1;
-                let atBoundary = fullRange;
-                if (!atBoundary && collapsed) {
-                    atBoundary = key === 'ArrowRight' ? sel0 >= len : sel0 <= 0;
-                }
-                if (atBoundary) {
-                    e.preventDefault();
-                    const delta = key === 'ArrowRight' ? 1 : -1;
-                    container._fdCycleGroupedTab(delta, { focusTab: false });
+                const focusedInsideResults = container.contains(activeEl);
+
+                if (focusedInsideResults) {
+                    // Focus is on the panel or an item → always cycle tabs and keep focus in results.
+                    event.preventDefault();
+                    container._fdCycleGroupedTab(key === 'ArrowRight' ? 1 : -1, { focusTab: false, focusPanel: true });
                     return;
+                }
+
+                if (activeEl === instance._alias) {
+                    // Alias focused: cycle tabs only when cursor is at the text boundary.
+                    const aliasInput = instance._alias;
+                    const inputLength = aliasInput.value.length;
+                    const cursorStart = aliasInput.selectionStart ?? 0;
+                    const cursorEnd   = aliasInput.selectionEnd   ?? 0;
+                    const fullRangeSelected = inputLength > 0 && cursorStart === 0 && cursorEnd === inputLength;
+                    const cursorCollapsed   = cursorStart === cursorEnd;
+                    let atTextBoundary = fullRangeSelected;
+                    if (!atTextBoundary && cursorCollapsed) {
+                        atTextBoundary = key === 'ArrowRight' ? cursorStart >= inputLength : cursorStart <= 0;
+                    }
+                    if (atTextBoundary) {
+                        event.preventDefault();
+                        container._fdCycleGroupedTab(key === 'ArrowRight' ? 1 : -1, { focusTab: false });
+                        return;
+                    }
                 }
             }
 
-            const panel = fd._getActivePanel(container) ?? container;
+            const panel = instance._getActivePanel(container) ?? container;
             const items = [...panel.querySelectorAll('li.item')];
             if (!items.length) {
                 return;
@@ -1043,34 +1063,46 @@ class Flexdatalist {
             if (key === 'Escape') {
                 if (!custom) {
                     container.remove();
-                    if (fd._resultsEl === container) fd._resultsEl = null;
+                    if (instance._resultsEl === container) instance._resultsEl = null;
                 }
+                instance._keyboardNavActive = false;
+                instance._alias.focus();
                 return;
             }
 
             if (key === 'Enter') {
-                const active = panel.querySelector('li.item.active');
-                if (active) { e.preventDefault(); active.click(); }
+                const activeItem = panel.querySelector('li.item.active');
+                if (activeItem) { event.preventDefault(); activeItem.click(); }
                 else if (!custom) {
-                    e.preventDefault();
+                    event.preventDefault();
                     container.remove();
-                    if (fd._resultsEl === container) fd._resultsEl = null;
+                    if (instance._resultsEl === container) instance._resultsEl = null;
                 }
                 return;
             }
 
             if (key === 'ArrowDown' || key === 'ArrowUp') {
-                e.preventDefault();
-                const active = panel.querySelector('li.item.active');
-                const idx = active ? items.indexOf(active) : -1;
-                active?.classList.remove('active');
+                event.preventDefault();
+                const activeItem = panel.querySelector('li.item.active');
+                // Ignore mouse-hover active state: only honour keyboard-set position.
+                const activeIndex = (instance._keyboardNavActive && activeItem)
+                    ? items.indexOf(activeItem)
+                    : -1;
+                activeItem?.classList.remove('active');
 
-                const next = key === 'ArrowDown'
-                    ? (items[idx + 1] ?? items[0])
-                    : (items[idx - 1] ?? items[items.length - 1]);
+                const nextItem = key === 'ArrowDown'
+                    ? (items[activeIndex + 1] ?? items[0])
+                    : (items[activeIndex - 1] ?? items[items.length - 1]);
 
-                next?.classList.add('active');
-                if (next) panel.scrollTop = next.offsetTop;
+                nextItem?.classList.add('active');
+                if (nextItem) {
+                    panel.scrollTop = nextItem.offsetTop;
+                    instance._keyboardNavActive = true;
+                    // Blur the alias explicitly first, then move focus to the panel.
+                    // The panel always has tabindex="-1" so focus() will succeed.
+                    instance._alias.blur();
+                    panel.focus({ preventScroll: true });
+                }
             }
         });
 
@@ -1228,7 +1260,7 @@ class Flexdatalist {
 
         this._leaveInterval = setInterval(() => {
             const activeId = (document.activeElement?.id ?? '').replace('-flexdatalist', '');
-            if (parentId === activeId || this._itemSelected) return;
+            if (parentId === activeId || this._itemSelected || this._resultsEl?.contains(document.activeElement)) return;
 
             this._fetchDisabled = true;
             if (this._alias.value.length > 0) {
@@ -1329,7 +1361,7 @@ class Flexdatalist {
      */
     _actClearText() {
         const o = this._options;
-        if (!o.multiple && o.selectionRequired && !String(this._value).length) {
+        if (!o.multiple && o.selectionRequired && !String(this._value).length && !this._keyboardNavActive) {
             this._alias.value = '';
         }
     }
@@ -1341,7 +1373,7 @@ class Flexdatalist {
      */
     _actClearValue() {
         const o = this._options;
-        if (!o.multiple && o.selectionRequired && this._alias.value.length <= o.minLength) {
+        if (!o.multiple && o.selectionRequired && this._alias.value.length <= o.minLength && !this._keyboardNavActive) {
             this._clearValue();
         }
     }
@@ -2377,6 +2409,7 @@ class Flexdatalist {
             li.addEventListener('click', () => {
                 const item = li._fdItem;
                 if (!item) return;
+                this._keyboardNavActive = false;
                 this._dispatch('before:flexdatalist.select', item);
                 if (!item.ignoreSelection) this._extractValue(item);
                 this._resultsRemove();
@@ -2387,6 +2420,7 @@ class Flexdatalist {
                 if (o.multiple) setTimeout(() => this._alias.focus(), 500);
             });
             li.addEventListener('mouseenter', () => {
+                this._keyboardNavActive = false;
                 const host = li.closest('ul') ?? container;
                 [...host.querySelectorAll(`li.${classes.item}.${classes.active}`)].forEach(l => l.classList.remove(classes.active));
                 li.classList.add(classes.active);
@@ -2566,6 +2600,7 @@ class Flexdatalist {
         container = document.createElement(tabs ? 'div' : 'ul');
         container.className = classes.results + (tabs ? ' ' + classes.tabs : '');
         container.id = this._alias.id + '-results';
+        container.setAttribute('tabindex', '-1');
         if (!tabs) {
             container.setAttribute('role', 'listbox');
         }
@@ -2633,16 +2668,20 @@ class Flexdatalist {
         const tabs = [];
         const panels = [];
 
-        const setActive = (nextIdx, { focusTab = false } = {}) => {
+        const setActive = (nextIdx, { focusTab = false, focusPanel = false } = {}) => {
             nextIdx = Math.max(0, Math.min(groupNames.length - 1, nextIdx));
             const prevIdx = Number(containerEl.dataset.fdlActiveTabIdx ?? 0);
             if (nextIdx === prevIdx && panels.length) {
                 if (focusTab) tabs[nextIdx]?.focus();
+                if (focusPanel) panels[nextIdx]?.focus();
                 return;
             }
 
             const prevPanel = panels[prevIdx];
             const nextPanel = panels[nextIdx];
+
+            // Clear any keyboard-highlighted item from the panel being left.
+            prevPanel?.querySelectorAll('li.item.active').forEach(item => item.classList.remove('active'));
             const dir = nextIdx > prevIdx ? 1 : -1;
 
             tabs.forEach((t, i) => {
@@ -2662,6 +2701,7 @@ class Flexdatalist {
                 });
                 containerEl.dataset.fdlActiveTabIdx = String(nextIdx);
                 if (focusTab) tabs[nextIdx]?.focus();
+                if (focusPanel) panels[nextIdx]?.focus();
                 return;
             }
 
@@ -2676,6 +2716,9 @@ class Flexdatalist {
 
             nextPanel.style.transform = `translateX(${dir * 100}%)`;
             prevPanel.style.transform = 'translateX(0%)';
+
+            // Focus the incoming panel immediately so keyboard nav continues uninterrupted.
+            if (focusPanel) nextPanel.focus();
 
             // Kick the transition.
             requestAnimationFrame(() => {
@@ -2730,6 +2773,7 @@ class Flexdatalist {
             panel.setAttribute('role', 'tabpanel');
             panel.setAttribute('aria-labelledby', tabId);
             panel.setAttribute('aria-hidden', idx === 0 ? 'false' : 'true');
+            panel.setAttribute('tabindex', '-1');
             panel.hidden = idx !== 0;
 
             this._renderItems(items, panel);
