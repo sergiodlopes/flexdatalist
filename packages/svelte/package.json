@@ -40,7 +40,7 @@
     "@sveltejs/vite-plugin-svelte": "^5.1.1",
     "flexdatalist": "workspace:*",
     "svelte": "^5.56.10",
-    "vite": "^6.4.3"
+    "vite": "^6.4.5"
   },
   "scripts": {
     "build": "vite build"
