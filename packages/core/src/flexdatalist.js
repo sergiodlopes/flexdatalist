@@ -1592,7 +1592,10 @@ class Flexdatalist {
         const o = this._options;
 
         if (o.multiple) {
-            if (!this._isEmpty(text) && !this._isDup(text)) {
+            // Enforce limitOfValues for every entry point (typing, addValue(),
+            // paste), not just by hiding the input once the limit is reached.
+            const limitReached = o.limitOfValues > 0 && this._texts.length >= o.limitOfValues;
+            if (!limitReached && !this._isEmpty(text) && !this._isDup(text)) {
                 this._texts.push(text);
                 this._multipleAdd(value, text);
             }
