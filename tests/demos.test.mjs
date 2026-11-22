@@ -486,6 +486,21 @@ await test('8b display', 'resultsContainer', async () => {
     const elsewhere = await page.evaluate(() => [...document.querySelectorAll('ul.flexdatalist-results')].filter(list => !list.closest('#display-container-panel')).length);
     expectEqual(elsewhere, 0, 'dropdowns outside the panel');
 });
+await test('8b display', 'classPrefix', async () => {
+    await type('display_prefix', 'ap');
+    await page.waitForSelector('ul.fd3-flexdatalist-results li.item', { timeout: 3000 });
+    const className = await page.locator('#display-prefix-class').innerText();
+    expect(className.includes('fd3-flexdatalist-results'), `results list class: "${className}"`);
+    expectEqual(await page.locator('ul.flexdatalist-results').count(), 0, 'unprefixed results lists');
+    const aliasClasses = await (await alias('display_prefix')).getAttribute('class');
+    expect(aliasClasses.includes('fd3-flexdatalist-alias'), `alias classes: ${aliasClasses}`);
+    // The prefixed copy of the stylesheet applies (only that rule sets z-index 10000).
+    const zIndex = await page.locator('ul.fd3-flexdatalist-results').evaluate(element => getComputedStyle(element).zIndex);
+    expectEqual(zIndex, '10000', 'results list z-index from the prefixed stylesheet');
+    await page.locator('ul.fd3-flexdatalist-results li.item', { hasText: 'Apple' }).click();
+    expectEqual(await valueOf('display_prefix'), 'Apple', 'value');
+});
+
 await test('8b display', 'theming with CSS variables', async () => {
     expectEqual(await tagTexts('display_themed'), ['Kiwi', 'Lime'], 'tags');
     const background = await page.evaluate(() => getComputedStyle(document.querySelector('#display-theme li.value')).backgroundColor);

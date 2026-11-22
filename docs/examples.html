@@ -928,6 +928,17 @@ visibleProperties: ['title', 'detail'], minLength: 0</div>
 // no dropdown: results are rendered inside the panel</div>
             </div>
 
+            <!-- classPrefix -->
+            <div class="bg-white border rounded-xl p-5">
+                <h3 class="font-semibold mb-3"><code>classPrefix</code> — run next to v2 styles</h3>
+                <input id="display-prefix" type="text" class="fdl-input"
+                    placeholder="Type a fruit…" name="display_prefix">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="display_prefix">—</span></p>
+                <p class="text-xs text-gray-500 mt-2">Results list class: <code id="display-prefix-class" class="bg-gray-100 px-1 rounded">(open the results)</code>. This example loads a copy of <code class="bg-gray-100 px-1 rounded">flexdatalist.css</code> with its <code class="bg-gray-100 px-1 rounded">.flexdatalist-*</code> selectors prefixed, the same way you would for a page that also uses v2.</p>
+                <div class="code-block mt-3">classPrefix: 'fd3-'   // → .fd3-flexdatalist-results, .fd3-flexdatalist-alias, …
+// your CSS: .fd3-flexdatalist-results { … }</div>
+            </div>
+
             <!-- theming -->
             <div class="bg-white border rounded-xl p-5">
                 <h3 class="font-semibold mb-3">Theming with CSS variables</h3>
@@ -1726,6 +1737,27 @@ Flexdatalist.init('#display-container', {
     visibleProperties: ['label', 'color'],
     resultsContainer: '#display-container-panel',
     minLength: 1,
+});
+
+// classPrefix: a copy of the stylesheet with every .flexdatalist-* selector
+// prefixed, as a page that also uses v2 would do.
+fetch('../packages/core/src/flexdatalist.css')
+    .then(response => response.text())
+    .then(css => {
+        const prefixedStyle = document.createElement('style');
+        prefixedStyle.textContent = css.replace(/\.flexdatalist-/g, '.fd3-flexdatalist-');
+        document.head.appendChild(prefixedStyle);
+    });
+Flexdatalist.init('#display-prefix', {
+    data: FRUITS,
+    searchIn: ['label'],
+    classPrefix: 'fd3-',
+    minLength: 1,
+}).then(([instance]) => {
+    instance.on('shown:flexdatalist.results', () => {
+        const list = document.querySelector('ul.fd3-flexdatalist-results');
+        document.getElementById('display-prefix-class').textContent = list ? list.className : '(not found)';
+    });
 });
 
 Flexdatalist.init('#display-themed', {
