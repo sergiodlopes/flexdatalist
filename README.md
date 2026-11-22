@@ -380,6 +380,18 @@ pnpm build   # build every package
 pnpm test    # run the core test suite (Vitest + happy-dom)
 ```
 
+### Demo page tests
+
+`pnpm test:demos` opens [`docs/examples.html`](docs/examples.html) in headless Chromium and uses every demo the way a person would: typing, clicking, the keyboard and pasting. It then checks the stored values, the displayed text, the requests received by the page's simulated server, and the browser console. The demos load `packages/core/src` directly, so no build is needed.
+
+```bash
+pnpm exec playwright install chromium   # once, downloads the browser
+pnpm test:demos                         # every demo
+pnpm test:demos -- remote               # only tests whose name contains "remote"
+```
+
+When you add or change a demo, add or update its test in [`tests/demos.test.mjs`](tests/demos.test.mjs).
+
 ## License
 
 Flexdatalist is licensed under the [MIT license](http://opensource.org/licenses/MIT).
