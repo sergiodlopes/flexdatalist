@@ -35,57 +35,84 @@ function eventToEmitName(name) {
 }
 
 const EMIT_NAMES = EVENTS.map(eventToEmitName);
+
+/**
+ * Shallow equality for option values, so inline literals such as
+ * `:search-in="['name']"` do not count as a change on every parent render.
+ */
+function isSameOption(a, b) {
+    if (a === b) return true;
+    if (Array.isArray(a) && Array.isArray(b)) {
+        return a.length === b.length && a.every((item, index) => item === b[index]);
+    }
+    const isPlainObject = (v) => v !== null && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype;
+    if (isPlainObject(a) && isPlainObject(b)) {
+        const keys = Object.keys(a);
+        return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key]);
+    }
+    return false;
+}
 </script>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, toRaw } from 'vue';
 import FlexdatalistCore from 'flexdatalist';
 
+// Option props default to `undefined` (not the core defaults), so an unset
+// prop is not sent and the core's `Flexdatalist.defaults` apply — including
+// any global overrides. An explicit `default: undefined` also stops Vue
+// casting absent Boolean props to `false`.
 const props = defineProps({
-    modelValue: { type: [String, Array, Object], default: '' },
-    url: { type: String, default: null },
-    data: { type: [Array, String], default: () => [] },
-    params: { type: [Object, Function], default: () => ({}) },
-    relatives: { type: [String, Object], default: null },
-    chainedRelatives: { type: Boolean, default: false },
-    cache: { type: Boolean, default: true },
-    cacheLifetime: { type: Number, default: 60 },
-    minLength: { type: Number, default: 3 },
-    groupBy: { type: [String, Boolean], default: false },
-    textProperty: { type: String, default: null },
-    valueProperty: { type: [String, Array], default: null },
-    visibleProperties: { type: [Array, String], default: () => [] },
-    iconProperty: { type: String, default: 'thumb' },
-    searchIn: { type: [Array, String], default: () => ['label'] },
-    searchContain: { type: Boolean, default: false },
-    searchEqual: { type: Boolean, default: false },
-    searchByWord: { type: Boolean, default: false },
-    searchDisabled: { type: Boolean, default: false },
-    searchDelay: { type: Number, default: 300 },
-    normalizeString: { type: Function, default: null },
-    multiple: { type: Boolean, default: null },
-    disabled: { type: Boolean, default: null },
-    selectionRequired: { type: Boolean, default: false },
-    focusFirstResult: { type: Boolean, default: false },
-    resultsProperty: { type: String, default: 'results' },
-    maxShownResults: { type: Number, default: 100 },
-    collapseAfterN: { type: [Number, Boolean], default: 50 },
-    collapsedValuesText: { type: String, default: '{count} More' },
-    noResultsText: { type: String, default: 'No results found for "{keyword}"' },
-    resultsLoader: { type: String, default: null },
-    toggleSelected: { type: Boolean, default: false },
-    allowDuplicateValues: { type: Boolean, default: false },
-    removeOnBackspace: { type: Boolean, default: true },
-    requestType: { type: String, default: 'get' },
-    requestContentType: { type: String, default: 'x-www-form-urlencoded' },
-    requestHeaders: { type: Object, default: null },
-    keywordParamName: { type: String, default: 'keyword' },
-    searchContainParamName: { type: String, default: 'contain' },
-    limitOfValues: { type: Number, default: 0 },
-    valuesSeparator: { type: String, default: ',' },
-    showAddNewItem: { type: Boolean, default: false },
-    addNewItemText: { type: String, default: 'No results found for "{keyword}". Click to add it.' },
-    debug: { type: Boolean, default: true },
+    modelValue: { type: [String, Number, Array, Object], default: '' },
+    url: { type: String, default: undefined },
+    data: { type: [Array, String], default: undefined },
+    params: { type: [Object, Function], default: undefined },
+    // Selector, element list (Array / NodeList) or a single element.
+    relatives: { type: [String, Array, Object], default: undefined },
+    chainedRelatives: { type: Boolean, default: undefined },
+    cache: { type: Boolean, default: undefined },
+    cacheLifetime: { type: Number, default: undefined },
+    minLength: { type: Number, default: undefined },
+    groupBy: { type: [String, Boolean], default: undefined },
+    groupView: { type: String, default: undefined },
+    groupTabAnimation: { type: Boolean, default: undefined },
+    textProperty: { type: String, default: undefined },
+    valueProperty: { type: [String, Array, Object], default: undefined },
+    visibleProperties: { type: [Array, String], default: undefined },
+    iconProperty: { type: String, default: undefined },
+    searchIn: { type: [Array, String], default: undefined },
+    searchContain: { type: Boolean, default: undefined },
+    searchEqual: { type: Boolean, default: undefined },
+    searchByWord: { type: Boolean, default: undefined },
+    searchDisabled: { type: Boolean, default: undefined },
+    searchDelay: { type: Number, default: undefined },
+    normalizeString: { type: Function, default: undefined },
+    multiple: { type: Boolean, default: undefined },
+    disabled: { type: Boolean, default: undefined },
+    selectionRequired: { type: Boolean, default: undefined },
+    focusFirstResult: { type: Boolean, default: undefined },
+    resultsProperty: { type: String, default: undefined },
+    maxShownResults: { type: Number, default: undefined },
+    collapseAfterN: { type: [Number, Boolean], default: undefined },
+    collapsedValuesText: { type: String, default: undefined },
+    noResultsText: { type: String, default: undefined },
+    resultsLoader: { type: String, default: undefined },
+    toggleSelected: { type: Boolean, default: undefined },
+    allowDuplicateValues: { type: Boolean, default: undefined },
+    removeOnBackspace: { type: Boolean, default: undefined },
+    requestType: { type: String, default: undefined },
+    requestContentType: { type: String, default: undefined },
+    requestHeaders: { type: Object, default: undefined },
+    keywordParamName: { type: String, default: undefined },
+    searchContainParamName: { type: String, default: undefined },
+    limitOfValues: { type: Number, default: undefined },
+    valuesSeparator: { type: String, default: undefined },
+    showAddNewItem: { type: Boolean, default: undefined },
+    addNewItemText: { type: String, default: undefined },
+    // Element or selector.
+    resultsContainer: { type: [String, Object], default: undefined },
+    classPrefix: { type: String, default: undefined },
+    debug: { type: Boolean, default: undefined },
     inputClass: { type: String, default: '' },
     name: { type: String, default: null },
     placeholder: { type: String, default: null },
@@ -96,14 +123,18 @@ const emit = defineEmits([
     ...EMIT_NAMES,
 ]);
 
+const OPTION_KEYS = Object.keys(FlexdatalistCore.defaults).filter((key) => key in props);
+const STRUCTURAL_KEYS = FlexdatalistCore.structuralOptions ?? ['multiple', 'classPrefix', 'resultsContainer'];
+
 const inputRef = ref(null);
 let instance = null;
+let appliedOptions = {};
 
 function buildOptions() {
     const opts = {};
-    const skip = new Set(['modelValue', 'inputClass', 'name', 'placeholder']);
-    for (const [key, val] of Object.entries(props)) {
-        if (!skip.has(key) && val !== null && val !== undefined) {
+    for (const key of OPTION_KEYS) {
+        const val = props[key];
+        if (val !== null && val !== undefined) {
             opts[key] = toRaw(val);
         }
     }
@@ -117,12 +148,19 @@ function listen(el, eventName, handler) {
     handlers.push([eventName, handler]);
 }
 
-onMounted(() => {
+function unlisten(el) {
+    for (const [eventName, handler] of handlers) {
+        el?.removeEventListener(eventName, handler);
+    }
+    handlers.length = 0;
+}
+
+function create(initialValue) {
     const el = inputRef.value;
-    if (props.modelValue !== '' && props.modelValue != null) {
-        el.value = typeof props.modelValue === 'object'
-            ? JSON.stringify(props.modelValue)
-            : String(props.modelValue);
+    if (initialValue !== '' && initialValue != null) {
+        el.value = typeof initialValue === 'object'
+            ? JSON.stringify(initialValue)
+            : String(initialValue);
     }
 
     // Listen before constructing: the core may dispatch init/change
@@ -135,17 +173,41 @@ onMounted(() => {
 
     // Construct synchronously so unmounting before the initial value
     // finished loading still destroys the instance.
-    instance = new FlexdatalistCore(el, buildOptions());
-});
+    appliedOptions = buildOptions();
+    instance = new FlexdatalistCore(el, appliedOptions);
+}
 
-onBeforeUnmount(() => {
-    const el = inputRef.value;
-    for (const [eventName, handler] of handlers) {
-        el?.removeEventListener(eventName, handler);
-    }
-    handlers.length = 0;
+function destroy() {
+    unlisten(inputRef.value);
     instance?.destroy();
     instance = null;
+}
+
+onMounted(() => create(props.modelValue));
+
+onBeforeUnmount(destroy);
+
+// React to option changes: structural options need a new instance, the
+// others are applied in place with setOption().
+watch(() => OPTION_KEYS.map((key) => props[key]), () => {
+    if (!instance) return;
+    const next = buildOptions();
+    if (STRUCTURAL_KEYS.some((key) => !isSameOption(appliedOptions[key], next[key]))) {
+        const currentValue = inputRef.value.value;
+        destroy();
+        create(props.modelValue !== '' && props.modelValue != null ? props.modelValue : currentValue);
+        return;
+    }
+    for (const key of OPTION_KEYS) {
+        if (isSameOption(appliedOptions[key], next[key])) continue;
+        instance.setOption(key, next[key] !== undefined ? next[key] : FlexdatalistCore.defaults[key]);
+    }
+    appliedOptions = next;
+});
+
+// The core copies the placeholder to the alias only once.
+watch(() => props.placeholder, (placeholder) => {
+    if (instance?._alias) instance._alias.placeholder = placeholder ?? '';
 });
 
 watch(() => props.modelValue, (val) => {
