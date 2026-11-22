@@ -376,20 +376,28 @@ class Flexdatalist {
         this._options = this._buildOptions(options);
 
         const p = String(this._options.classPrefix ?? '');
-        /** @type {Record<string, string>} Resolved CSS classes for this instance. */
+        /**
+         * Resolved CSS classes for this instance. `classPrefix` applies to every
+         * `flexdatalist-*` class that carries styles, so v3 can run next to v2 CSS.
+         * Not prefixed: the `flexdatalist` / `flexdatalist-set` markers on the
+         * original input (the auto-init selector; also keeps v2's auto-init from
+         * grabbing inputs v3 already set up), the v3-only `fdl-*` classes, and
+         * generic state classes scoped inside the prefixed containers.
+         * @type {Record<string, string>}
+         */
         this._classes = {
             // Input / setup
             root:              'flexdatalist',
             set:               'flexdatalist-set',
             alias:             p + 'flexdatalist-alias',
             multiple:          p + 'flexdatalist-multiple',
-            multipleValue:     'flexdatalist-multiple-value',
+            multipleValue:     p + 'flexdatalist-multiple-value',
             multipleFocus:     'focus',
 
             // Results container
-            results:           'flexdatalist-results',
-            resultsFetching:   'flexdatalist-fetching-results',
-            resultsLoaderItem: 'flexdatalist-fetching-results-loader',
+            results:           p + 'flexdatalist-results',
+            resultsFetching:   p + 'flexdatalist-fetching-results',
+            resultsLoaderItem: p + 'flexdatalist-fetching-results-loader',
 
             // Grouping (tabs)
             tabs:              'fdl-tabs',
@@ -408,8 +416,8 @@ class Flexdatalist {
             valueMarked:       'marked',
             valueText:         'text',
             remove:            'fdl-remove',
-            collapsedItem:     'flexdatalist-collapsed-item',
-            collapsedControl:  'flexdatalist-collapsed-control',
+            collapsedItem:     p + 'flexdatalist-collapsed-item',
+            collapsedControl:  p + 'flexdatalist-collapsed-control',
 
             // Misc UI state (scoped; unprefixed)
             disabled:          'disabled',
@@ -418,9 +426,9 @@ class Flexdatalist {
             isAnimating:       'is-animating',
 
             // Loading state for input
-            loading:           'flexdatalist-loading',
-            fetching:          'flexdatalist-fetching',
-            fetchAnimation:    'flexdatalist-fetch-animation',
+            loading:           p + 'flexdatalist-loading',
+            fetching:          p + 'flexdatalist-fetching',
+            fetchAnimation:    p + 'flexdatalist-fetch-animation',
 
             // Results items
             item:              'item',

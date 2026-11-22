@@ -34,7 +34,8 @@ Flexdatalist v3 can namespace its CSS classes so it can coexist with v2 on the s
 
 - **Option**: `classPrefix` (default: empty string)
   - When empty, v3 uses the legacy class names (compatible with v2 CSS).
-  - When set (e.g. `fd3-`), v3 will emit prefixed classes like `fd3-flexdatalist-results`.
+  - When set (e.g. `fd3-`), v3 will emit prefixed classes like `fd3-flexdatalist-results`: every styled `flexdatalist-*` class (alias, tags wrapper, results, loader, collapsed tags) gets the prefix.
+  - Not prefixed: the `flexdatalist` / `flexdatalist-set` markers on the original input (used to find inputs to auto-initialise), the v3-only `fdl-*` classes, and generic classes such as `item`, `value` or `active`, which only appear inside the prefixed elements.
 
 Example (using data-attributes):
 

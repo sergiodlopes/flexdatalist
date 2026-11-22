@@ -183,6 +183,19 @@ All options can be set via the constructor, via `data-*` attributes (camelCase b
 | `keywordParamName` | `string` | `'keyword'` | Query parameter name for the typed keyword |
 | `searchContainParamName` | `string` | `'contain'` | Query parameter name for the searchContain flag |
 
+#### Request parameters
+
+Every remote request sends the keyword (`keyword`), the `contain` flag, `selected` (current value) and `original` (initial value) as strings, plus your `params`. When values are being resolved (an initial value or `setValue()` with a `valueProperty`), they are sent in `load`. GET query strings and urlencoded POST bodies encode nested data with bracket keys, like jQuery's `$.param`:
+
+```
+keyword=Lis&contain=false&selected=1,2&original=1,2
+&load[]=1&load[]=2
+&relatives[country]=PT
+&tags[]=a&tags[]=b&filter[active]=true
+```
+
+PHP, Rails or Express (`qs`) read these back as arrays/objects (`$_GET['load']` is an array). With `requestContentType: 'json'` the same data is sent as a JSON body.
+
 ### Cache
 
 | Option | Type | Default | Description |

@@ -442,6 +442,29 @@ describe('destroy()', () => {
     });
 });
 
+describe('classPrefix', () => {
+    it('prefixes every styled flexdatalist-* class so v2 CSS does not apply', async () => {
+        mockFetch(() => new Promise(resolve => setTimeout(() => resolve({ results: [{ id: 'a', label: 'Alpha' }] }), 20)));
+        document.body.innerHTML = '<input id="t" multiple value="a">';
+        const fd = make('#t', { classPrefix: 'fd3-', url: '/api', valueProperty: 'id', collapseAfterN: 0, minLength: 1 });
+        // While the initial value loads: loading bar and fetching state.
+        expect(document.querySelector('.fd3-flexdatalist-fetch-animation')).not.toBeNull();
+        await fd.ready;
+        fd.setOption('data', [{ id: 'b', label: 'Beta' }]);
+        fd.search('B');
+        await wait(40);
+
+        const classes = new Set([...document.querySelectorAll('[class]')].flatMap(el => [...el.classList]));
+        const unprefixed = [...classes].filter(cls => cls.startsWith('flexdatalist') && !['flexdatalist', 'flexdatalist-set'].includes(cls));
+        expect(unprefixed).toEqual([]);
+        for (const expected of ['fd3-flexdatalist-alias', 'fd3-flexdatalist-multiple', 'fd3-flexdatalist-multiple-value', 'fd3-flexdatalist-results', 'fd3-flexdatalist-collapsed-control']) {
+            expect(classes).toContain(expected);
+        }
+        // The marker stays unprefixed, so v2's auto-init (".flexdatalist:not(.flexdatalist-set)") skips this input.
+        expect(document.getElementById('t').classList.contains('flexdatalist-set')).toBe(true);
+    });
+});
+
 describe('accessibility', () => {
     it('implements the combobox pattern', () => {
         document.body.innerHTML = '<input id="city" aria-label="City" required>';
