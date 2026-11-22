@@ -8,7 +8,7 @@
 // On the website the pages sit at the site root, next to a core/ folder:
 //
 //   docs-dist/
-//     index.html, examples.html, demo-api.js, demo-data.js, countries.json
+//     index.html, examples.html, docs.css, docs.js, demo-api.js, demo-data.js, countries.json
 //     llms.txt                (from packages/core, served at /llms.txt)
 //     core/flexdatalist.js
 //     core/flexdatalist.css

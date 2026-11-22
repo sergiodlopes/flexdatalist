@@ -696,22 +696,105 @@ await test('14 advanced', 'noResultsText', async () => {
 });
 
 // --- index.html ---
-await test('index', 'docs page loads and hero demo works', async () => {
-    const docsPage = await browser.newPage();
-    const docsErrors = [];
-    docsPage.on('pageerror', error => docsErrors.push(error.message));
-    await docsPage.goto(`${baseUrl}${pagesPath}/index.html`);
-    await docsPage.waitForFunction(() => document.querySelector('.flexdatalist-alias'));
-    const hero = docsPage.locator('.flexdatalist-alias').first();
-    await hero.click();
-    await hero.pressSequentially('portu', { delay: 25 });
-    await docsPage.waitForSelector('ul.flexdatalist-results li.item', { timeout: 3000 });
-    await docsPage.locator('ul.flexdatalist-results li.item').first().click();
-    const stored = await docsPage.locator('#hero-val').innerText();
-    await docsPage.close();
-    expectEqual(docsErrors, [], 'page errors');
-    expect(stored !== '—', `hero value: ${stored}`);
+const docsPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const docsErrors = [];
+docsPage.on('pageerror', error => docsErrors.push(error.message));
+// The star count comes from api.github.com; keep the tests offline and deterministic.
+await docsPage.route('https://api.github.com/**', route => route.abort());
+await docsPage.goto(`${baseUrl}${pagesPath}/index.html`);
+await docsPage.waitForFunction(() => typeof Flexdatalist === 'function' && document.querySelector('.flexdatalist-alias'));
+const heroAlias = () => docsPage.locator('#hero-demo .flexdatalist-alias');
+const heroItems = () => docsPage.locator('ul.flexdatalist-results[id^="hd-"] li.item:not(.no-results)');
+async function heroType(text) {
+    const input = heroAlias();
+    await input.click();
+    await input.fill('');
+    await input.pressSequentially(text, { delay: 25 });
+}
+
+await test('index', 'hero opens with "Por" typed and highlighted matches', async () => {
+    await docsPage.waitForSelector('ul.flexdatalist-results[id^="hd-single"] li.item span.highlight', { timeout: 4000 });
+    expectEqual(await heroAlias().inputValue(), 'Por', 'alias text');
+    // searchIn name + capital: "Por" finds Portugal, Puerto Rico… and Benin (capital Porto-Novo).
+    const flags = await docsPage.locator('ul.flexdatalist-results[id^="hd-"] .prop-iso2').allInnerTexts();
+    expect(flags.includes('PT') && flags.includes('BJ'), `result flags: ${flags.join(', ')}`);
 });
+await test('index', 'hero single: pick a country', async () => {
+    await heroType('portu');
+    await docsPage.waitForFunction(() => document.querySelectorAll('ul.flexdatalist-results[id^="hd-"] li.item:not(.no-results)').length === 1);
+    await heroItems().first().click();
+    await docsPage.waitForTimeout(100);
+    expectEqual(await docsPage.locator('#hero-value').innerText(), 'PT', 'getValue readout');
+    expectEqual(await docsPage.locator('#hero-text').innerText(), 'Portugal', 'getText readout');
+});
+await test('index', 'hero tabs: keyboard to Tags with PT,ES,FR', async () => {
+    await docsPage.locator('#hero-tab-single').focus();
+    await docsPage.keyboard.press('ArrowRight');
+    await docsPage.waitForFunction(() => document.querySelectorAll('#hero-demo li.value').length === 3);
+    expectEqual(await docsPage.locator('#hero-tab-tags').getAttribute('aria-selected'), 'true', 'tags tab selected');
+    expect(await docsPage.evaluate(() => document.activeElement.id) === 'hero-tab-tags', 'focus moved to the tab');
+    expectEqual(await docsPage.locator('#hero-value').innerText(), '["PT","ES","FR"]', 'getValue readout');
+    expectEqual(await docsPage.locator('ul.flexdatalist-results').count(), 0, 'old dropdown removed');
+});
+await test('index', 'hero tabs: Grouped shows continent headers', async () => {
+    await docsPage.keyboard.press('ArrowRight');
+    await heroType('ma');
+    await docsPage.waitForSelector('ul.flexdatalist-results[id^="hd-grouped"] li.group', { timeout: 4000 });
+    expect(await docsPage.locator('ul.flexdatalist-results[id^="hd-grouped"] li.item.active').count() === 1, 'first result highlighted');
+});
+await test('index', 'hero remote: fetched, then served from the cache', async () => {
+    await docsPage.locator('#hero-tab-remote').click();
+    await heroType('por');
+    await docsPage.waitForSelector('ul.flexdatalist-results[id^="hd-remote"] li.item', { timeout: 4000 });
+    await docsPage.waitForTimeout(100);
+    expect((await docsPage.locator('[data-request-text]').innerText()).includes('keyword=por'), 'request line shows the keyword');
+    expect((await docsPage.locator('[data-request-badge]').innerText()).startsWith('fetched'), 'first search is fetched');
+    await docsPage.keyboard.press('Escape');
+    await heroType('por');
+    await docsPage.waitForSelector('ul.flexdatalist-results[id^="hd-remote"] li.item', { timeout: 4000 });
+    await docsPage.waitForTimeout(100);
+    expectEqual(await docsPage.locator('[data-request-badge]').innerText(), 'localStorage cache', 'second search badge');
+});
+await test('index', 'sidebar counts come from the page', async () => {
+    const counts = await docsPage.locator('.sidebar [data-count]').allInnerTexts();
+    expectEqual(counts, ['47', '22', '19'], 'options / api / events');
+});
+await test('index', 'options filter, empty state and "/" shortcut', async () => {
+    await docsPage.locator('h1').click();
+    await docsPage.keyboard.press('/');
+    expect(await docsPage.evaluate(() => document.activeElement.id) === 'opt-filter', '"/" focuses the filter');
+    await docsPage.keyboard.type('cache');
+    const visible = await docsPage.locator('.opt:visible .opt-link').allInnerTexts();
+    // Matches name, type, default and description: "data" says "(loaded once, cached)".
+    expectEqual(visible, ['data', 'cache', 'cacheLifetime'], 'options matching "cache"');
+    expectEqual(await docsPage.locator('[data-opt-count]').innerText(), '3 / 47', 'live count');
+    await docsPage.locator('#opt-filter').fill('zzzz');
+    expect(await docsPage.locator('[data-opt-empty]').isVisible(), 'empty state shown');
+    await docsPage.locator('#opt-filter').fill('');
+    expectEqual(await docsPage.locator('.opt:visible').count(), 47, 'all options back');
+});
+await test('index', 'event log prints real events', async () => {
+    const before = await docsPage.locator('[data-event-lines] li').count();
+    expect(before > 0, 'init events logged');
+    await docsPage.locator('[data-events-clear]').click();
+    await docsPage.waitForFunction(() => [...document.querySelectorAll('[data-event-lines] li')].some(line => line.dataset.event === 'clear:flexdatalist'));
+});
+await test('index', 'theme toggle switches and keeps .fdl-dark in sync', async () => {
+    const startTheme = await docsPage.evaluate(() => document.documentElement.dataset.theme);
+    await docsPage.locator('[data-theme-toggle]').click();
+    const state = await docsPage.evaluate(() => ({
+        theme: document.documentElement.dataset.theme,
+        fdlDark: document.documentElement.classList.contains('fdl-dark'),
+        stored: localStorage.getItem('fd-docs-theme'),
+    }));
+    expect(state.theme !== startTheme, 'theme changed');
+    expectEqual(state.fdlDark, state.theme === 'dark', '.fdl-dark follows the theme');
+    expectEqual(state.stored, state.theme, 'choice saved');
+});
+await test('index', 'no page errors', async () => {
+    expectEqual(docsErrors, [], 'page errors');
+});
+await docsPage.close();
 
 // --- report ---
 const failed = results.filter(result => !result.passed);
