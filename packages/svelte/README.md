@@ -60,6 +60,7 @@ All Flexdatalist events are re-dispatched with shortened names. Access data via 
 | `change:flexdatalist` | `on:change` |
 | `clear:flexdatalist` | `on:clear` |
 | `addnew:flexdatalist` | `on:addnew` |
+| `error:flexdatalist` | `on:error` |
 | `before:flexdatalist.search` | `on:beforesearch` |
 | `after:flexdatalist.search` | `on:aftersearch` |
 | `show:flexdatalist.results` | `on:showresults` |

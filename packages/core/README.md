@@ -110,6 +110,7 @@ All events are dispatched as `CustomEvent` on the original `<input>`. Access dat
 | `change:flexdatalist` | `{ value, text }` |
 | `clear:flexdatalist` | — |
 | `addnew:flexdatalist` | Keyword string |
+| `error:flexdatalist` | `{ error, url }` (remote request failed) |
 | `before:flexdatalist.search` | `{ keywords, data }` |
 | `after:flexdatalist.search` | `{ keywords, data, results }` |
 

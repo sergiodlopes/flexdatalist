@@ -253,6 +253,7 @@ Events are dispatched as native `CustomEvent` on the original `<input>` element.
 | `remove:flexdatalist.results` | -- | Dropdown being removed |
 | `before:flexdatalist.data` | -- | Before data loading |
 | `after:flexdatalist.data` | data | Data loaded |
+| `error:flexdatalist` | `{ error, url }` | A remote request failed (network, HTTP or JSON error) |
 
 ## CSS Theming
 

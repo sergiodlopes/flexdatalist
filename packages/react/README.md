@@ -62,6 +62,7 @@ All Flexdatalist events are available as callback props. Each receives `(detail,
 | `change:flexdatalist` | `onChange` |
 | `clear:flexdatalist` | `onClear` |
 | `addnew:flexdatalist` | `onAddNew` |
+| `error:flexdatalist` | `onError` |
 | `before:flexdatalist.search` | `onBeforeSearch` |
 | `after:flexdatalist.search` | `onAfterSearch` |
 | `show:flexdatalist.results` | `onShowResults` |

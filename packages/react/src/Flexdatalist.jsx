@@ -7,6 +7,7 @@ const EVENTS = [
     ['change:flexdatalist', 'onChange'],
     ['clear:flexdatalist', 'onClear'],
     ['addnew:flexdatalist', 'onAddNew'],
+    ['error:flexdatalist', 'onError'],
     ['before:flexdatalist.value', 'onBeforeValue'],
     ['after:flexdatalist.value', 'onAfterValue'],
     ['before:flexdatalist.select', 'onBeforeSelect'],

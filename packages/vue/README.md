@@ -61,6 +61,7 @@ All Flexdatalist events are re-emitted with shortened names. The `e.detail` payl
 | `change:flexdatalist` | `@change` |
 | `clear:flexdatalist` | `@clear` |
 | `addnew:flexdatalist` | `@addnew` |
+| `error:flexdatalist` | `@error` |
 | `before:flexdatalist.search` | `@before-search` |
 | `after:flexdatalist.search` | `@after-search` |
 | `show:flexdatalist.results` | `@show-results` |

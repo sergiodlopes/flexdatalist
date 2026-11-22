@@ -299,8 +299,8 @@ class Flexdatalist {
         /** @type {boolean} Prevent fetching while the user is navigating away. */
         this._fetchDisabled = false;
 
-        /** @type {{ url: string, data?: Object, success: Function }|null} Request that arrived while one was already in-flight; replayed after the current fetch settles. */
-        this._pendingRequest = null;
+        /** @type {Array<{ url: string, data?: Object, success: Function, error?: Function, replaceable?: boolean }>} Requests queued while one was in flight; run in order after it settles. */
+        this._pendingRequests = [];
 
         /** @type {number|null} setTimeout handle for debounced search. */
         this._searchTimeout = null;
@@ -773,6 +773,7 @@ class Flexdatalist {
      * - `remove:flexdatalist.results` — dropdown is being removed
      * - `before:flexdatalist.data`    — before data loading
      * - `after:flexdatalist.data`     — data loaded
+     * - `error:flexdatalist`         — a remote request failed (`{ error, url }`)
      *
      * @param {string}   event    Event name (e.g. `'select:flexdatalist'`).
      * @param {Function} handler  Callback receiving the native CustomEvent.
@@ -818,7 +819,7 @@ class Flexdatalist {
         this._searchTimeout = null;
         this._leaveTimeout = null;
         document.removeEventListener('focusout', this._onDocumentFocusOut, true);
-        this._pendingRequest = null;
+        this._pendingRequests = [];
         window.removeEventListener('resize', this._onResize);
         if (this._onRelativeChange) {
             for (const rel of this._options.relatives ?? []) {
@@ -2052,11 +2053,17 @@ class Flexdatalist {
         if (typeof o.data === 'string') {
             const cached = this._cacheRead(o.data, true);
             if (cached) { callback(cached); return; }
-            this._request({ url: o.data, success: data => {
-                o.data = data;
-                callback(data);
-                this._cacheWrite(o.data, data, o.cacheLifetime, true);
-            }});
+            const dataUrl = o.data;
+            this._request({
+                url: dataUrl,
+                success: data => {
+                    o.data = data;
+                    callback(data);
+                    this._cacheWrite(dataUrl, data, o.cacheLifetime, true);
+                },
+                // Keep o.data as the URL so the next load retries.
+                error: () => callback(null),
+            });
         } else {
             if (!Array.isArray(o.data)) o.data = [];
             callback(o.data);
@@ -2121,10 +2128,14 @@ class Flexdatalist {
 
         this._request({
             url: o.url, data,
+            // A newer search supersedes a queued one; value loads must all run.
+            replaceable: load === undefined,
             success: _data => {
                 callback(_data);
                 this._cacheWrite(cacheKey, _data, o.cacheLifetime, true);
             },
+            // Carry on with static/datalist data so callers (and `ready`) settle.
+            error: () => callback(null),
         });
     }
 
@@ -2132,20 +2143,28 @@ class Flexdatalist {
      * Execute a fetch request, applying method, headers, and content-type.
      *
      * @private
-     * @param {{ url: string, data?: Object, success: Function }} settings
+     * Requests run one at a time. While one is in flight, later ones are
+     * queued: every value load is kept (each has a callback that must run,
+     * e.g. pasting "a,b,c" or the initial value), while a queued search
+     * (`replaceable`) is superseded by a newer search.
+     *
+     * On a network/HTTP/JSON error, `settings.error` is called and an
+     * `error:flexdatalist` event is dispatched, so callers never hang.
+     *
+     * @private
+     * @param {{ url: string, data?: Object, success: Function, error?: Function, replaceable?: boolean }} settings
      */
     _request(settings) {
         const o = this._options;
         const el = this._hiddenInput;
         const classes = this._classes;
         if (this._requestInFlight) {
-            // A fetch is already in-flight. Save this request as pending so its
-            // callback is not silently dropped (e.g. init value-load vs. a fast
-            // server that triggers a second _dataLoad before the first resolves).
-            this._pendingRequest = settings;
+            if (settings.replaceable) {
+                this._pendingRequests = this._pendingRequests.filter(queued => !queued.replaceable);
+            }
+            this._pendingRequests.push(settings);
             return;
         }
-        this._pendingRequest = null;
         this._requestInFlight = true;
         el.classList.add(classes.loading);
 
@@ -2174,27 +2193,41 @@ class Flexdatalist {
         }
 
         fetch(url, fetchOpts)
-            .then(r => r.json())
-            .then(data => {
-                // The instance was destroyed while the request was in flight.
-                if (this._destroyed) return;
-                settings.success(this._extractRemoteData(data));
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status} ${response.statusText}`.trim());
+                }
+                return response.json();
             })
+            .then(
+                data => {
+                    // The instance was destroyed while the request was in flight.
+                    if (this._destroyed) return;
+                    settings.success(this._extractRemoteData(data));
+                },
+                err => {
+                    if (this._destroyed) return;
+                    if (o.debug) {
+                        console.error('Flexdatalist fetch error:', err);
+                    }
+                    this._dispatch('error:flexdatalist', { error: err, url: settings.url });
+                    settings.error?.(err);
+                },
+            )
             .catch(err => {
+                // An exception thrown by a success/error callback.
                 if (o.debug) {
-                    console.error('Flexdatalist fetch error:', err);
+                    console.error('Flexdatalist error:', err);
                 }
             })
             .finally(() => {
                 this._requestInFlight = false;
                 // After destroy() the element may already belong to a new instance.
-                if (!this._destroyed) el.classList.remove(classes.loading);
-                // If a request arrived while this one was in-flight, run it now.
-                if (this._pendingRequest && !this._destroyed) {
-                    const pending = this._pendingRequest;
-                    this._pendingRequest = null;
-                    this._request(pending);
-                }
+                if (this._destroyed) return;
+                el.classList.remove(classes.loading);
+                // Run the next request queued while this one was in flight.
+                const next = this._pendingRequests.shift();
+                if (next) this._request(next);
             });
     }
 

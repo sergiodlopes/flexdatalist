@@ -58,6 +58,7 @@
         ['change:flexdatalist', 'change'],
         ['clear:flexdatalist', 'clear'],
         ['addnew:flexdatalist', 'addnew'],
+        ['error:flexdatalist', 'error'],
         ['before:flexdatalist.value', 'beforevalue'],
         ['after:flexdatalist.value', 'aftervalue'],
         ['before:flexdatalist.select', 'beforeselect'],
