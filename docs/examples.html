@@ -82,6 +82,14 @@
         }
         .nav-drop-menu a:hover { background: #eef2ff; color: #4f46e5; }
 
+        /* result icons (iconProperty: 'thumb') and secondary text */
+        .flexdatalist-results li img.prop-thumb {
+            display: inline-block; /* Tailwind's preflight makes images block-level */
+            width: 28px; height: 28px; border-radius: 50%;
+            vertical-align: middle; margin-right: 0.5rem;
+        }
+        .flexdatalist-results li .prop-email { color: #6b7280; font-size: 0.8em; }
+
         /* flexdatalist-multiple inside our nicer wrapper */
         .flexdatalist-multiple { border: 1px solid #d1d5db; border-radius: 0.375rem; background: #fff; }
         .flexdatalist-multiple:focus-within { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
@@ -409,14 +417,14 @@ data-value-property="iso2"</div>
                 <h3 class="font-semibold mb-3"><code>params</code> function + <code>keywordParamName</code></h3>
                 <label class="text-xs text-gray-500 block mb-2">Continent sent with every request:
                     <select id="remote-params-continent" class="ml-1 border rounded px-1 py-0.5 text-xs">
-                        <option value="Europe">Europe</option>
                         <option value="Asia">Asia</option>
+                        <option value="Europe">Europe</option>
                         <option value="Africa">Africa</option>
                         <option value="">(any)</option>
                     </select>
                 </label>
                 <input id="remote-params" type="text" class="fdl-input"
-                    placeholder="Search countries in the selected continent…" name="remote_params">
+                    placeholder="Try 'in' (Asia), then switch to Europe" name="remote_params">
                 <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="remote_params">—</span></p>
                 <div class="code-block mt-3">keywordParamName: 'q',                 // ?q=… instead of ?keyword=…
 params: () => ({ continent: select.value }),  // read at request time
@@ -893,7 +901,10 @@ value="166,149"</div>
                 <div class="code-block mt-3">searchIn: ['name', 'email'],
 visibleProperties: ['thumb', 'name', 'email'],
 iconProperty: 'thumb',          // property holding an image URL
-valueProperty: 'id', textProperty: 'name'</div>
+valueProperty: 'id', textProperty: 'name'
+
+/* size the icon yourself: */
+.flexdatalist-results li img.prop-thumb { width: 28px; height: 28px; }</div>
             </div>
 
             <!-- grouped tabs, mixed records -->
