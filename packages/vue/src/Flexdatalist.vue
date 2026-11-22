@@ -97,7 +97,6 @@ const emit = defineEmits([
 
 const inputRef = ref(null);
 let instance = null;
-let internalUpdate = false;
 
 function buildOptions() {
     const opts = {};
@@ -131,11 +130,7 @@ onMounted(() => {
         const emitName = EMIT_NAMES[i];
         listen(el, EVENTS[i], (e) => emit(emitName, e.detail));
     }
-    listen(el, 'change:flexdatalist', (e) => {
-        internalUpdate = true;
-        emit('update:modelValue', e.detail.value);
-        internalUpdate = false;
-    });
+    listen(el, 'change:flexdatalist', (e) => emit('update:modelValue', e.detail.value));
 
     // Construct synchronously so unmounting before the initial value
     // finished loading still destroys the instance.
@@ -153,7 +148,12 @@ onBeforeUnmount(() => {
 });
 
 watch(() => props.modelValue, (val) => {
-    if (internalUpdate || !instance) return;
+    if (!instance) return;
+    // Skip values the input already holds (typically the one we just
+    // emitted). setValue() clears first, so calling it with the current
+    // value would emit a spurious clear/change and could loop via v-model.
+    // The core's own serialiser keeps CSV / JSON modes comparable.
+    if (instance._toStr(val) === String(inputRef.value?.value ?? '').trim()) return;
     instance.setValue(val);
 });
 

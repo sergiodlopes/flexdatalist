@@ -43,11 +43,18 @@ const OPTION_KEYS = [
     'showAddNewItem', 'addNewItemText', 'debug',
 ];
 
+/**
+ * Whether `value` serialises to what the hidden input already holds.
+ * Uses the core's own serialiser so CSV / JSON modes compare correctly.
+ */
+function isCurrentValue(instance, input, value) {
+    return instance._toStr(value) === String(input?.value ?? '').trim();
+}
+
 const Flexdatalist = forwardRef(function Flexdatalist(props, ref) {
     const { value, className, name, placeholder, ...rest } = props;
     const inputRef = useRef(null);
     const instanceRef = useRef(null);
-    const internalUpdate = useRef(false);
     const callbacksRef = useRef({});
 
     for (const [, propName] of EVENTS) {
@@ -115,10 +122,14 @@ const Flexdatalist = forwardRef(function Flexdatalist(props, ref) {
     }, []);
 
     useEffect(() => {
-        if (internalUpdate.current || !instanceRef.current) return;
-        if (value !== undefined) {
-            instanceRef.current.setValue(value);
-        }
+        const fd = instanceRef.current;
+        if (!fd || value === undefined) return;
+        // Skip values the input already holds (typically the one we just
+        // reported through onChange). setValue() clears first, so calling
+        // it with the current value would emit a spurious clear/change and,
+        // with async data, could loop through the parent's state.
+        if (isCurrentValue(fd, inputRef.current, value)) return;
+        fd.setValue(value);
     }, [value]);
 
     return (

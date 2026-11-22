@@ -82,7 +82,6 @@
 
     let inputEl;
     let instance = null;
-    let internalUpdate = false;
 
     function buildOptions() {
         const opts = {};
@@ -137,11 +136,7 @@
         for (const [eventName, emitName] of EVENTS) {
             listen(eventName, (e) => dispatch(emitName, e.detail));
         }
-        listen('change:flexdatalist', (e) => {
-            internalUpdate = true;
-            value = e.detail.value;
-            internalUpdate = false;
-        });
+        listen('change:flexdatalist', (e) => { value = e.detail.value; });
 
         // Construct synchronously so destroying the component before the
         // initial value finished loading still destroys the instance.
@@ -157,9 +152,17 @@
         instance = null;
     });
 
-    $: if (instance && !internalUpdate) {
-        instance.setValue(value);
+    // Skip values the input already holds (typically the one we just copied
+    // from a change event). setValue() clears first, so calling it with the
+    // current value would emit a spurious clear/change and re-trigger this
+    // block. The core's own serialiser keeps CSV / JSON modes comparable.
+    function syncValue(fd, nextValue) {
+        if (!fd) return;
+        if (fd._toStr(nextValue) === String(inputEl?.value ?? '').trim()) return;
+        fd.setValue(nextValue);
     }
+
+    $: syncValue(instance, value);
 </script>
 
 <input
