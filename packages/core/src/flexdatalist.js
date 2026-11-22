@@ -947,6 +947,7 @@ class Flexdatalist {
         el.style.top = '';
         el.style.left = '';
         el.removeAttribute('tabindex');
+        el.removeAttribute('aria-hidden');
         el.value = !clear && this._options?.originalValue ? this._options.originalValue : '';
 
         container?.remove();
@@ -1066,15 +1067,66 @@ class Flexdatalist {
     }
 
     /**
-     * Apply ARIA attributes to the alias input for screen-reader support.
+     * Apply ARIA attributes for screen readers (WAI-ARIA combobox pattern):
+     * the alias is a `combobox` controlling the results `listbox`, its
+     * `aria-expanded` follows the dropdown and `aria-activedescendant` the
+     * highlighted option. Labelling attributes of the original input are
+     * copied to the alias, and the original (off-screen) input is hidden
+     * from assistive technology.
      *
      * @private
      * @param {HTMLInputElement} alias
      */
     _setA11y(alias) {
+        const el = this._hiddenInput;
+        alias.setAttribute('role', 'combobox');
         alias.setAttribute('aria-autocomplete', 'list');
         alias.setAttribute('aria-expanded', 'false');
-        alias.setAttribute('aria-owns', alias.id + '-results');
+        alias.setAttribute('aria-controls', alias.id + '-results');
+        for (const attr of ['aria-label', 'aria-labelledby', 'aria-describedby', 'aria-required', 'aria-invalid']) {
+            if (el.hasAttribute(attr)) alias.setAttribute(attr, el.getAttribute(attr));
+        }
+        if (el.required && !alias.hasAttribute('aria-required')) {
+            alias.setAttribute('aria-required', 'true');
+        }
+        el.setAttribute('aria-hidden', 'true');
+    }
+
+    /**
+     * Highlight a result option (keyboard or mouse) and expose it through
+     * `aria-activedescendant`; `null` clears the highlight.
+     *
+     * @private
+     * @param {HTMLLIElement|null} item
+     */
+    _setActiveItem(item) {
+        const classes = this._classes;
+        this._resultsEl?.querySelectorAll(`li.${classes.item}.${classes.active}`).forEach(li => {
+            li.classList.remove(classes.active);
+            li.setAttribute('aria-selected', 'false');
+        });
+        const panel = item?.closest('ul');
+        if (item) {
+            item.classList.add(classes.active);
+            item.setAttribute('aria-selected', 'true');
+            this._alias.setAttribute('aria-activedescendant', item.id);
+            panel?.setAttribute('aria-activedescendant', item.id);
+            item.dispatchEvent(new CustomEvent('active:flexdatalist.results', { detail: item._fdItem }));
+        } else {
+            this._alias.removeAttribute('aria-activedescendant');
+            this._resultsEl?.querySelectorAll('[aria-activedescendant]').forEach(node => node.removeAttribute('aria-activedescendant'));
+        }
+    }
+
+    /**
+     * Mark the dropdown as open or closed on the alias (`aria-expanded`).
+     *
+     * @private
+     * @param {boolean} open
+     */
+    _setExpanded(open) {
+        this._alias?.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (!open) this._alias?.removeAttribute('aria-activedescendant');
     }
 
     /**
@@ -1173,8 +1225,7 @@ class Flexdatalist {
                 if (target && target === document.activeElement) continue;
                 if (!container.contains(e.target) && container !== e.target) {
                     fd._keyboardNavActive = false;
-                    container.remove();
-                    if (fd._resultsEl === container) fd._resultsEl = null;
+                    fd._resultsRemove();
                 }
             }
         });
@@ -1234,7 +1285,9 @@ class Flexdatalist {
             }
 
             const panel = instance._getActivePanel(container) ?? container;
-            const items = [...panel.querySelectorAll('li.item')];
+            // Selectable options only: the "No results" message is not one,
+            // the "add new item" entry is.
+            const items = [...panel.querySelectorAll('li.item:not(.no-results), li.item.add-new-item')];
             if (!items.length) {
                 return;
             }
@@ -1242,10 +1295,7 @@ class Flexdatalist {
             const custom = container._fdCustom;
 
             if (key === 'Escape') {
-                if (!custom) {
-                    container.remove();
-                    if (instance._resultsEl === container) instance._resultsEl = null;
-                }
+                if (!custom) instance._resultsRemove();
                 instance._keyboardNavActive = false;
                 instance._alias.focus();
                 return;
@@ -1256,8 +1306,7 @@ class Flexdatalist {
                 if (activeItem) { event.preventDefault(); activeItem.click(); }
                 else if (!custom) {
                     event.preventDefault();
-                    container.remove();
-                    if (instance._resultsEl === container) instance._resultsEl = null;
+                    instance._resultsRemove();
                 }
                 return;
             }
@@ -1269,13 +1318,12 @@ class Flexdatalist {
                 const activeIndex = (instance._keyboardNavActive && activeItem)
                     ? items.indexOf(activeItem)
                     : -1;
-                activeItem?.classList.remove('active');
 
                 const nextItem = key === 'ArrowDown'
                     ? (items[activeIndex + 1] ?? items[0])
                     : (items[activeIndex - 1] ?? items[items.length - 1]);
 
-                nextItem?.classList.add('active');
+                instance._setActiveItem(nextItem ?? null);
                 if (nextItem) {
                     panel.scrollTop = nextItem.offsetTop;
                     instance._keyboardNavActive = true;
@@ -2762,15 +2810,17 @@ class Flexdatalist {
             });
             li.addEventListener('mouseenter', () => {
                 this._keyboardNavActive = false;
-                const host = li.closest('ul') ?? container;
-                [...host.querySelectorAll(`li.${classes.item}.${classes.active}`)].forEach(l => l.classList.remove(classes.active));
-                li.classList.add(classes.active);
-                li.dispatchEvent(new CustomEvent('active:flexdatalist.results', { detail: li._fdItem }));
+                this._setActiveItem(li);
             });
-            li.addEventListener('mouseleave', () => li.classList.remove(classes.active));
+            li.addEventListener('mouseleave', () => {
+                if (li.classList.contains(classes.active)) this._setActiveItem(null);
+            });
         }
 
-        if (o.focusFirstResult) (this._getActivePanel(container) ?? container).querySelector('li.' + classes.item)?.classList.add(classes.active);
+        if (o.focusFirstResult) {
+            const first = (this._getActivePanel(container) ?? container).querySelector('li.' + classes.item);
+            if (first) this._setActiveItem(first);
+        }
     }
 
     /**
@@ -2799,14 +2849,21 @@ class Flexdatalist {
             li.className = `${classes.item} ${classes.noResults} ${classes.addNewItem}`;
             li.innerHTML = o.addNewItemText.replace('{keyword}', this._escape(kw));
             li._fdItem = { isAddNew: true, keyword: kw };
+            li.id = this._nextOptionId();
+            li.setAttribute('role', 'option');
+            li.setAttribute('aria-selected', 'false');
             container.appendChild(li);
             li.addEventListener('click', () => { this._resultsRemove(); this._dispatch('addnew:flexdatalist', kw); });
-            li.addEventListener('mouseenter', () => li.classList.add(classes.active));
-            li.addEventListener('mouseleave', () => li.classList.remove(classes.active));
+            li.addEventListener('mouseenter', () => this._setActiveItem(li));
+            li.addEventListener('mouseleave', () => {
+                if (li.classList.contains(classes.active)) this._setActiveItem(null);
+            });
         } else {
             const li = document.createElement('li');
             const classes = this._classes;
             li.className = `${classes.item} ${classes.noResults}`;
+            // Announced by screen readers, but not a selectable option.
+            li.setAttribute('role', 'status');
             li.textContent = text.replace('{keyword}', kw);
             container.appendChild(li);
         }
@@ -2847,7 +2904,9 @@ class Flexdatalist {
         const classes = this._classes;
         const li = document.createElement('li');
         li.className = classes.item;
+        li.id = this._nextOptionId();
         li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', 'false');
         li.setAttribute('tabindex', '-1');
         li.setAttribute('aria-posinset', idx + 1);
         li.setAttribute('aria-setsize', total);
@@ -2926,7 +2985,10 @@ class Flexdatalist {
             }
             el._fdTarget = this._multipleEl ?? this._alias;
             el._fdInput = this._hiddenInput;
+            if (!el.id) el.id = this._alias.id + '-results';
+            this._alias.setAttribute('aria-controls', el.id);
             this._resultsEl = el;
+            this._setExpanded(true);
             return el;
         }
 
@@ -2962,7 +3024,20 @@ class Flexdatalist {
         parent.appendChild(container);
         this._position(container, target);
         this._resultsEl = container;
+        this._setExpanded(true);
         return container;
+    }
+
+    /**
+     * Return a unique id for a result option (referenced by
+     * `aria-activedescendant`).
+     *
+     * @private
+     * @returns {string}
+     */
+    _nextOptionId() {
+        this._optionCounter = (this._optionCounter ?? 0) + 1;
+        return `${this._alias.id}-option-${this._optionCounter}`;
     }
 
     /**
@@ -3029,7 +3104,7 @@ class Flexdatalist {
             const nextPanel = panels[nextIdx];
 
             // Clear any keyboard-highlighted item from the panel being left.
-            prevPanel?.querySelectorAll('li.item.active').forEach(item => item.classList.remove('active'));
+            this._setActiveItem(null);
             const dir = nextIdx > prevIdx ? 1 : -1;
 
             tabs.forEach((t, i) => {
@@ -3219,6 +3294,7 @@ class Flexdatalist {
      */
     _resultsLoadingStop() {
         const classes = this._classes;
+        this._setExpanded(false);
         if (this._customContainer) {
             this._customContainer.replaceChildren();
             this._customContainer.classList.remove(classes.resultsFetching);
@@ -3239,6 +3315,7 @@ class Flexdatalist {
      */
     _resultsRemove(itemsOnly = false) {
         this._dispatch('remove:flexdatalist.results');
+        if (!itemsOnly) this._setExpanded(false);
         if (this._customContainer) {
             this._customContainer.replaceChildren();
         } else {
