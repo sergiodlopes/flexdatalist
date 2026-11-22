@@ -920,7 +920,7 @@ document.<span class="fn">querySelector</span>(<span class="st">'#tags'</span>)
             <pre class="code-block"><span class="kw">const</span> el = document.<span class="fn">querySelector</span>(<span class="st">'#city'</span>);
 
 <span class="cm">// Using the fd instance (chainable)</span>
-<span class="kw">const</span> [fd] = Flexdatalist.<span class="fn">init</span>(el, { url: <span class="st">'/api/cities'</span> });
+<span class="kw">const</span> [fd] = <span class="kw">await</span> Flexdatalist.<span class="fn">init</span>(el, { url: <span class="st">'/api/cities'</span> });
 fd.<span class="fn">on</span>(<span class="st">'select:flexdatalist'</span>, e =&gt; {
     console.<span class="fn">log</span>(<span class="st">'Selected:'</span>, e.detail);
     <span class="cm">// e.detail → { id: 42, name: 'Paris', country: 'FR' }</span>

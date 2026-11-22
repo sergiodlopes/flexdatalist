@@ -5,15 +5,20 @@
   "type": "module",
   "main": "dist/flexdatalist-svelte.es.js",
   "module": "dist/flexdatalist-svelte.es.js",
-  "svelte": "dist/flexdatalist-svelte.es.js",
+  "types": "src/index.d.ts",
+  "svelte": "./src/index.js",
   "exports": {
     ".": {
+      "types": "./src/index.d.ts",
+      "svelte": "./src/index.js",
       "import": "./dist/flexdatalist-svelte.es.js",
-      "svelte": "./dist/flexdatalist-svelte.es.js"
-    }
+      "default": "./dist/flexdatalist-svelte.es.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "repository": {
     "type": "git",

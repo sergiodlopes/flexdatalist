@@ -33,7 +33,9 @@ function CityPicker() {
 
 ## Props
 
-All [Flexdatalist options](https://github.com/sergiodlopes/flexdatalist) are available as props:
+All [Flexdatalist options](https://github.com/sergiodlopes/flexdatalist) are available as props. Props are reactive: a changed option is applied with `setOption()`, and `multiple`, `classPrefix` or `resultsContainer` re-create the widget (keeping its value). Unset props fall back to `Flexdatalist.defaults`, including global overrides. Other attributes (`id`, `required`, `aria-*`, `data-*`…) are passed to the input.
+
+Example:
 
 ```jsx
 <Flexdatalist
@@ -62,6 +64,7 @@ All Flexdatalist events are available as callback props. Each receives `(detail,
 | `change:flexdatalist` | `onChange` |
 | `clear:flexdatalist` | `onClear` |
 | `addnew:flexdatalist` | `onAddNew` |
+| `error:flexdatalist` | `onError` |
 | `before:flexdatalist.search` | `onBeforeSearch` |
 | `after:flexdatalist.search` | `onAfterSearch` |
 | `show:flexdatalist.results` | `onShowResults` |

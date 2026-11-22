@@ -23,13 +23,19 @@ npm install flexdatalist
 
 The class auto-initialises on `DOMContentLoaded` for inputs with the `flexdatalist` class.
 
+Files for a `<script>` tag (both define a global `Flexdatalist` class):
+
+- `src/flexdatalist.js` (+ `src/flexdatalist.css`): the readable source, also exported as `flexdatalist/standalone` (+ `flexdatalist/standalone/css`) so tools can resolve its path. It is a classic script, not an ES module, so `import` it only for its side effect; use `import Flexdatalist from 'flexdatalist'` to get the class.
+- `dist/flexdatalist.umd.js` (+ `dist/flexdatalist.css`): the minified build.
+
 ### Running v2 + v3 side-by-side (avoiding CSS conflicts)
 
 Flexdatalist v3 can namespace its CSS classes so it can coexist with v2 on the same page.
 
 - **Option**: `classPrefix` (default: empty string)
   - When empty, v3 uses the legacy class names (compatible with v2 CSS).
-  - When set (e.g. `fd3-`), v3 will emit prefixed classes like `fd3-flexdatalist-results`.
+  - When set (e.g. `fd3-`), v3 will emit prefixed classes like `fd3-flexdatalist-results`: every styled `flexdatalist-*` class (alias, tags wrapper, results, loader, collapsed tags) gets the prefix.
+  - Not prefixed: the `flexdatalist` / `flexdatalist-set` markers on the original input (used to find inputs to auto-initialise), the v3-only `fdl-*` classes, and generic classes such as `item`, `value` or `active`, which only appear inside the prefixed elements.
 
 Example (using data-attributes):
 
@@ -110,6 +116,7 @@ All events are dispatched as `CustomEvent` on the original `<input>`. Access dat
 | `change:flexdatalist` | `{ value, text }` |
 | `clear:flexdatalist` | — |
 | `addnew:flexdatalist` | Keyword string |
+| `error:flexdatalist` | `{ error, url }` (remote request failed) |
 | `before:flexdatalist.search` | `{ keywords, data }` |
 | `after:flexdatalist.search` | `{ keywords, data, results }` |
 

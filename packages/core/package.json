@@ -3,22 +3,26 @@
   "description": "Standalone autocomplete/datalist input — no dependencies",
   "version": "3.1.1",
   "type": "module",
-  "main": "dist/flexdatalist.umd.js",
+  "main": "dist/flexdatalist.umd.cjs",
   "module": "dist/flexdatalist.es.js",
+  "types": "src/flexdatalist.d.ts",
   "exports": {
     ".": {
+      "types": "./src/flexdatalist.d.ts",
       "import": "./dist/flexdatalist.es.js",
-      "require": "./dist/flexdatalist.umd.js"
+      "require": "./dist/flexdatalist.umd.cjs"
     },
     "./css": "./dist/flexdatalist.css",
     "./standalone": "./src/flexdatalist.js",
-    "./standalone/css": "./src/flexdatalist.css"
+    "./standalone/css": "./src/flexdatalist.css",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "src/flexdatalist.js",
     "src/flexdatalist.css",
-    "llms.txt"
+    "llms.txt",
+    "src/flexdatalist.d.ts"
   ],
   "style": "dist/flexdatalist.css",
   "repository": {
@@ -41,9 +45,12 @@
   "license": "MIT",
   "homepage": "https://github.com/sergiodlopes/flexdatalist",
   "scripts": {
-    "build": "vite build"
+    "build": "vite build",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "vite": "^6.4.3"
+    "happy-dom": "^15.11.7",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.4"
   }
 }

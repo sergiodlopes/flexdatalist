@@ -5,9 +5,12 @@
     "build:core": "pnpm --filter flexdatalist build",
     "build:vue": "pnpm --filter flexdatalist-vue build",
     "build:react": "pnpm --filter flexdatalist-react build",
-    "build:svelte": "pnpm --filter flexdatalist-svelte build"
+    "build:svelte": "pnpm --filter flexdatalist-svelte build",
+    "test": "pnpm --filter flexdatalist test"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

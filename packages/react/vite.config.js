@@ -13,13 +13,13 @@ export default defineConfig({
         outDir: 'dist',
         emptyOutDir: true,
         rollupOptions: {
-            external: ['react', 'react-dom', 'react/jsx-runtime', 'flexdatalist'],
+            external: ['react', 'react/jsx-runtime', 'flexdatalist'],
             output: {
-                globals: {
-                    react: 'React',
-                    'react-dom': 'ReactDOM',
-                    flexdatalist: 'Flexdatalist',
-                },
+                // The component uses hooks and the DOM: mark it as a Client
+                // Component so it can be imported from React Server Components
+                // (e.g. the Next.js App Router). Source-level directives are
+                // dropped by the bundler, so it is added to the output.
+                banner: "'use client';",
             },
         },
     },
