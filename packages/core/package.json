@@ -27,7 +27,7 @@
   "style": "dist/flexdatalist.css",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sergiodlopes/flexdatalist.git",
+    "url": "git+https://github.com/sergiodlopes/flexdatalist.git",
     "directory": "packages/core"
   },
   "bugs": {
