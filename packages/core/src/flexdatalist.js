@@ -1544,8 +1544,10 @@ class Flexdatalist {
             return;
         }
 
-        cb(values);
+        // Apply first: the constructor's callback dispatches init and resolves
+        // `ready`, which must see the value already in place.
         this._extractValue(values, init);
+        cb(values);
     }
 
     /**
