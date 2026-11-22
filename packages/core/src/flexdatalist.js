@@ -2223,10 +2223,10 @@ class Flexdatalist {
                 fetchOpts.body = JSON.stringify(settings.data ?? {});
             } else {
                 fetchOpts.headers = { ...(fetchOpts.headers ?? {}), 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' };
-                fetchOpts.body = new URLSearchParams(settings.data ?? {}).toString();
+                fetchOpts.body = this._encodeParams(settings.data);
             }
         } else if (settings.data) {
-            url += (url.includes('?') ? '&' : '?') + new URLSearchParams(settings.data).toString();
+            url += (url.includes('?') ? '&' : '?') + this._encodeParams(settings.data);
         }
 
         fetch(url, fetchOpts)
@@ -2286,6 +2286,38 @@ class Flexdatalist {
             Object.assign(this._options, d.options);
         }
         return this._isObj(d) ? d : [];
+    }
+
+    /**
+     * Encode request data as `application/x-www-form-urlencoded` (query string
+     * or POST body), flattening nested objects and arrays into bracket keys
+     * like jQuery's `$.param` (v2 behaviour) — `relatives[country]=PT`,
+     * `ids[]=1&ids[]=2`, `items[0][id]=1` — which PHP, Rails, Express (qs)…
+     * parse back into structures. Plain `URLSearchParams` sent nested values
+     * as `[object Object]` and arrays as `1,2`.
+     *
+     * `null` becomes an empty string; `undefined` and functions are skipped.
+     *
+     * @private
+     * @param {Object} [data]
+     * @returns {string}
+     */
+    _encodeParams(data) {
+        const pairs = [];
+        const add = (key, value) => {
+            if (value === undefined || typeof value === 'function') return;
+            if (value === null) {
+                pairs.push([key, '']);
+            } else if (Array.isArray(value)) {
+                value.forEach((entry, index) => add(this._isObj(entry) ? `${key}[${index}]` : `${key}[]`, entry));
+            } else if (typeof value === 'object') {
+                for (const [subKey, subValue] of Object.entries(value)) add(`${key}[${subKey}]`, subValue);
+            } else {
+                pairs.push([key, String(value)]);
+            }
+        };
+        for (const [key, value] of Object.entries(data ?? {})) add(key, value);
+        return new URLSearchParams(pairs).toString();
     }
 
     /**
