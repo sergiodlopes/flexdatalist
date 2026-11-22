@@ -1307,13 +1307,17 @@ class Flexdatalist {
     /**
      * Copy alias text to the hidden input in single + !selectionRequired mode.
      *
+     * Only runs on `input` events, i.e. when the user actually changed the text.
+     * Running on `keyup` would overwrite a selected value (e.g. an id) with its
+     * display text when a non-editing key (Tab, arrows, Shift…) is released.
+     *
      * @private
-     * @param {KeyboardEvent} e
+     * @param {KeyboardEvent|InputEvent} e
      */
     _actCopyValue(e) {
-        if (e.key === 'Enter') return;
+        if (e.type !== 'input') return;
         const o = this._options;
-        if (!o.multiple && !o.selectionRequired && this._alias.value.length !== this._value.length) {
+        if (!o.multiple && !o.selectionRequired && this._alias.value !== String(this._value ?? '')) {
             this._extractValue(this._alias.value);
         }
     }
