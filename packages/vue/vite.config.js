@@ -14,12 +14,6 @@ export default defineConfig({
         emptyOutDir: true,
         rollupOptions: {
             external: ['vue', 'flexdatalist'],
-            output: {
-                globals: {
-                    vue: 'Vue',
-                    flexdatalist: 'Flexdatalist',
-                },
-            },
         },
     },
 });

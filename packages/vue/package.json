@@ -7,8 +7,10 @@
   "module": "dist/flexdatalist-vue.es.js",
   "exports": {
     ".": {
-      "import": "./dist/flexdatalist-vue.es.js"
-    }
+      "import": "./dist/flexdatalist-vue.es.js",
+      "default": "./dist/flexdatalist-vue.es.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"
