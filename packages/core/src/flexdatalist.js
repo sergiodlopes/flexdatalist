@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Flexdatalist — standalone ES6 class.
  *
  * Autocomplete / tag input with remote & static data, grouping, keyboard
@@ -8,7 +8,7 @@
  *
  * @author Sergio Dinis Lopes <flexdatalist@sergiodinislopes.pt>
  * @copyright 2016-2026 Sergio Dinis Lopes
- * @version 3.1.1
+ * @version 3.2.0
  * @license MIT
  *
  * Basic usage
