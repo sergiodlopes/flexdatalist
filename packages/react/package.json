@@ -5,13 +5,18 @@
   "type": "module",
   "main": "dist/flexdatalist-react.es.js",
   "module": "dist/flexdatalist-react.es.js",
+  "types": "src/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/flexdatalist-react.es.js"
-    }
+      "types": "./src/index.d.ts",
+      "import": "./dist/flexdatalist-react.es.js",
+      "default": "./dist/flexdatalist-react.es.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "src/index.d.ts"
   ],
   "repository": {
     "type": "git",
@@ -32,8 +37,7 @@
   "homepage": "https://github.com/sergiodlopes/flexdatalist",
   "peerDependencies": {
     "flexdatalist": "^3.0.0",
-    "react": "^18 || ^19",
-    "react-dom": "^18 || ^19"
+    "react": "^18 || ^19"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.7.0",

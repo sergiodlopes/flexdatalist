@@ -96,7 +96,7 @@ const [fd] = await Flexdatalist.init('#people', {
 - **Custom normaliser** -- plug in your own `normalizeString` function
 - **Keyword highlighting** -- matched text is wrapped in `<span class="highlight">`
 - **localStorage caching** -- cache remote and search results with configurable TTL and automatic garbage collection
-- **Chained relatives** -- link inputs so their values are sent with every request, with optional auto-disable
+- **Chained relatives** -- link inputs so their values are sent with every request, optionally read-only until a relative has a value
 - **Theming via CSS custom properties** -- override `--fdl-accent`, `--fdl-tag-bg`, etc.
 - **Dialog support** -- dropdown positions correctly inside `<dialog>` elements
 - **ARIA attributes** -- `aria-autocomplete`, `aria-expanded`, `aria-owns`, `role="listbox"` on results
@@ -105,7 +105,7 @@ const [fd] = await Flexdatalist.init('#people', {
 
 ## Options
 
-All options can be set via the constructor, via `data-*` attributes (camelCase becomes kebab-case), or at runtime with `setOption()`.
+All options can be set via the constructor, via `data-*` attributes (camelCase becomes kebab-case), or at runtime with `setOption()` (except `multiple`, `classPrefix` and `resultsContainer`, which need a new instance).
 
 ### Data Source
 
@@ -115,7 +115,7 @@ All options can be set via the constructor, via `data-*` attributes (camelCase b
 | `data` | `array\|string` | `[]` | Static data array or URL to a JSON file |
 | `params` | `object\|function` | `{}` | Extra params sent with every request (or a `(keyword) => object` function) |
 | `relatives` | `string\|NodeList\|null` | `null` | CSS selector of inputs whose values are sent as `relatives[name]` |
-| `chainedRelatives` | `boolean` | `false` | Disable this input when all relatives are empty |
+| `chainedRelatives` | `boolean` | `false` | Make this input read-only while all relatives are empty (its value is still submitted) |
 | `resultsProperty` | `string` | `'results'` | Key in the JSON response holding the results array |
 
 ### Search
@@ -178,6 +178,19 @@ All options can be set via the constructor, via `data-*` attributes (camelCase b
 | `keywordParamName` | `string` | `'keyword'` | Query parameter name for the typed keyword |
 | `searchContainParamName` | `string` | `'contain'` | Query parameter name for the searchContain flag |
 
+#### Request parameters
+
+Every remote request sends the keyword (`keyword`), the `contain` flag, `selected` (current value) and `original` (initial value) as strings, plus your `params`. When values are being resolved (an initial value or `setValue()` with a `valueProperty`), they are sent in `load`. GET query strings and urlencoded POST bodies encode nested data with bracket keys, like jQuery's `$.param`:
+
+```
+keyword=Lis&contain=false&selected=1,2&original=1,2
+&load[]=1&load[]=2
+&relatives[country]=PT
+&tags[]=a&tags[]=b&filter[active]=true
+```
+
+PHP, Rails or Express (`qs`) read these back as arrays/objects (`$_GET['load']` is an array). With `requestContentType: 'json'` the same data is sent as a JSON body.
+
 ### Cache
 
 | Option | Type | Default | Description |
@@ -210,7 +223,7 @@ const [fd] = await Flexdatalist.init('#input', options);
 | `search(keyword)` | Programmatically trigger a search |
 | `closeResults()` | Close the results dropdown |
 | `getOption(name)` | Get an option value |
-| `setOption(name, value)` | Set an option value at runtime |
+| `setOption(name, value)` | Set an option value at runtime (normalised and applied like constructor options; `multiple`, `classPrefix` and `resultsContainer` need a new instance) |
 | `on(event, handler)` | Subscribe to an event |
 | `off(event, handler)` | Unsubscribe from an event |
 | `destroy(clear?)` | Destroy the instance and restore the original input |
@@ -248,6 +261,7 @@ Events are dispatched as native `CustomEvent` on the original `<input>` element.
 | `remove:flexdatalist.results` | -- | Dropdown being removed |
 | `before:flexdatalist.data` | -- | Before data loading |
 | `after:flexdatalist.data` | data | Data loaded |
+| `error:flexdatalist` | `{ error, url }` | A remote request failed (network, HTTP or JSON error) |
 
 ## CSS Theming
 
@@ -431,6 +445,26 @@ Use it with `<CityPicker bind:value={cityId} name="city_id" />`. This works in S
 Check out the [examples and documentation](http://projects.sergiodinislopes.pt/flexdatalist/) page.
 
 Using an AI coding assistant? Point it at [`packages/core/llms.txt`](packages/core/llms.txt), a compact reference with the server response format, all options and the most common integration mistakes. It is also shipped in the npm package.
+
+## Development
+
+```bash
+pnpm install
+pnpm build   # build every package
+pnpm test    # run the core test suite (Vitest + happy-dom)
+```
+
+### Demo page tests
+
+`pnpm test:demos` opens [`docs/examples.html`](docs/examples.html) in headless Chromium and uses every demo the way a person would: typing, clicking, the keyboard and pasting. It then checks the stored values, the displayed text, the requests received by the page's simulated server, and the browser console. The demos load `packages/core/src` directly, so no build is needed.
+
+```bash
+pnpm exec playwright install chromium   # once, downloads the browser
+pnpm test:demos                         # every demo
+pnpm test:demos -- remote               # only tests whose name contains "remote"
+```
+
+When you add or change a demo, add or update its test in [`tests/demos.test.mjs`](tests/demos.test.mjs).
 
 ## License
 

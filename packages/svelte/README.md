@@ -33,7 +33,9 @@ npm install flexdatalist flexdatalist-svelte
 
 ## Props
 
-All [Flexdatalist options](https://github.com/sergiodlopes/flexdatalist) are available as props:
+All [Flexdatalist options](https://github.com/sergiodlopes/flexdatalist) are available as props. Props are reactive: a changed option is applied with `setOption()`, and `multiple`, `classPrefix` or `resultsContainer` re-create the widget (keeping its value). Unset props fall back to `Flexdatalist.defaults`, including global overrides. Other attributes (`id`, `required`, `aria-*`, `data-*`…) are passed to the input.
+
+Example:
 
 ```svelte
 <Flexdatalist
@@ -62,6 +64,7 @@ All Flexdatalist events are re-dispatched with shortened names. Access data via 
 | `change:flexdatalist` | `on:change` |
 | `clear:flexdatalist` | `on:clear` |
 | `addnew:flexdatalist` | `on:addnew` |
+| `error:flexdatalist` | `on:error` |
 | `before:flexdatalist.search` | `on:beforesearch` |
 | `after:flexdatalist.search` | `on:aftersearch` |
 | `show:flexdatalist.results` | `on:showresults` |
@@ -83,7 +86,7 @@ Access the underlying Flexdatalist instance via `bind:this`:
 <button on:click={() => fd.search('paris')}>Search Paris</button>
 ```
 
-Available methods: `getInstance()`, `getValue()`, `setValue(val)`, `addValue(val)`, `removeValue(val)`, `toggleValue(val)`, `clear()`, `getText(format)`, `search(keyword)`, `closeResults()`, `disable()`, `enable()`, `setReadonly(state)`.
+Available methods: `getInstance()`, `getValue()`, `setValue(val)`, `addValue(val)`, `removeValue(val)`, `toggleValue(val)`, `clear()`, `getText(format)`, `search(keyword)`, `closeResults()`, `disable()`, `enable()`, `readonly(state)` (`setReadonly(state)` is kept as an alias).
 
 ## License
 

@@ -34,7 +34,11 @@ const city = ref('');
 
 ## Props
 
-All [Flexdatalist options](https://github.com/sergiodlopes/flexdatalist) are available as props:
+All [Flexdatalist options](https://github.com/sergiodlopes/flexdatalist) are available as props. Props are reactive: a changed option is applied with `setOption()`, and `multiple`, `classPrefix` or `resultsContainer` re-create the widget (keeping its value). Unset props fall back to `Flexdatalist.defaults`, including global overrides. Other attributes (`id`, `required`, `aria-*`, `data-*`…) are passed to the input.
+
+`v-model` holds the serialised value submitted with the form (e.g. `"1,3"` in multiple mode, a JSON string with `value-property="*"`); use the `getValue()` method for an array or object.
+
+Example:
 
 ```vue
 <Flexdatalist
@@ -63,11 +67,12 @@ All Flexdatalist events are re-emitted with shortened names. The `e.detail` payl
 | `change:flexdatalist` | `@change` |
 | `clear:flexdatalist` | `@clear` |
 | `addnew:flexdatalist` | `@addnew` |
+| `error:flexdatalist` | `@error` |
 | `before:flexdatalist.search` | `@before-search` |
 | `after:flexdatalist.search` | `@after-search` |
 | `show:flexdatalist.results` | `@show-results` |
 
-Plus: `@init`, `@before-value`, `@after-value`, `@before-select`, `@after-select`, `@before-remove`, `@after-remove`, `@before-remove-all`, `@after-remove-all`, `@before-toggle`, `@after-toggle`, `@before-data`, `@after-data`, `@shown-results`, `@item-result`, `@empty-results`, `@remove-results`, `@removed-results`.
+Plus: `@init`, `@before-value`, `@after-value`, `@before-select`, `@after-select`, `@before-remove`, `@after-remove`, `@before-remove-all`, `@after-remove-all`, `@before-toggle`, `@after-toggle`, `@before-data`, `@after-data`, `@shown-results`, `@item-results`, `@empty-results`, `@remove-results`, `@removed-results`.
 
 ## Ref methods
 

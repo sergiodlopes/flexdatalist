@@ -58,7 +58,7 @@ class Flexdatalist {
          * @type {string|NodeList|null}
          */
         relatives: null,
-        /** @type {boolean} Disable this input when all relatives are empty. */
+        /** @type {boolean} Make this input read-only while all relatives are empty (it stays in the form). */
         chainedRelatives: false,
         /** @type {boolean} Cache remote results in localStorage. */
         cache: true,
@@ -200,6 +200,22 @@ class Flexdatalist {
     /** @type {boolean} Whether global document listeners have been attached. */
     static #globalBound = false;
 
+    /**
+     * Auto-init on page load (same behaviour as the jQuery plugin): every
+     * `input.flexdatalist` without `.autodiscover-disabled` is initialised on
+     * DOMContentLoaded. Registered when the class is defined — it used to be
+     * registered only when a first instance was created, so a page relying on
+     * auto-init alone never initialised anything. Skipped outside a browser
+     * (SSR) and when the page has already finished loading.
+     */
+    static {
+        if (typeof document !== 'undefined' && document.readyState !== 'complete') {
+            document.addEventListener('DOMContentLoaded', () => {
+                Flexdatalist.init('input.flexdatalist:not(.flexdatalist-set):not(.autodiscover-disabled)');
+            }, { once: true });
+        }
+    }
+
     // =========================================================================
     // Static API
     // =========================================================================
@@ -299,33 +315,89 @@ class Flexdatalist {
         /** @type {boolean} Prevent fetching while the user is navigating away. */
         this._fetchDisabled = false;
 
-        /** @type {{ url: string, data?: Object, success: Function }|null} Request that arrived while one was already in-flight; replayed after the current fetch settles. */
-        this._pendingRequest = null;
+        /** @type {Array<{ url: string, data?: Object, success: Function, error?: Function, replaceable?: boolean }>} Requests queued while one was in flight; run in order after it settles. */
+        this._pendingRequests = [];
 
         /** @type {number|null} setTimeout handle for debounced search. */
         this._searchTimeout = null;
 
-        /** @type {number|null} setInterval handle for leave detection. */
-        this._leaveInterval = null;
+        /** @type {number|null} setTimeout handle for the deferred leave check. */
+        this._leaveTimeout = null;
+
+        /**
+         * Document-level focusout listener (capture) that detects focus leaving
+         * the widget (alias, tags wrapper or results). Kept for destroy().
+         * @type {Function}
+         */
+        this._onDocumentFocusOut = e => {
+            if (this._ownsElement(e.target)) this._scheduleLeaveCheck();
+        };
+
+        /** @type {boolean} Whether this instance has a fetch in flight. */
+        this._requestInFlight = false;
+
+        /** @type {boolean} Set by destroy(); late async callbacks become no-ops. */
+        this._destroyed = false;
+
+        /** @type {number|null} requestAnimationFrame handle for a pending reposition. */
+        this._repositionFrame = null;
+
+        /**
+         * Reposition the open dropdown and loading bar, at most once per frame.
+         * Called on window resize, on scroll anywhere (capture, so scrolling
+         * containers count) and when the alias/tags wrapper changes size.
+         * Kept so destroy() can remove it.
+         * @type {Function}
+         */
+        this._onResize = () => {
+            if (this._repositionFrame !== null) return;
+            const schedule = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : callback => setTimeout(callback, 16);
+            this._repositionFrame = schedule(() => {
+                this._repositionFrame = null;
+                if (this._destroyed) return;
+                if (this._resultsEl?.isConnected) this._position();
+                if (this._loadingEl?.isConnected) this._position(this._loadingEl);
+            });
+        };
+
+        /** @type {ResizeObserver|null} Watches the alias / tags wrapper size. */
+        this._resizeObserver = null;
+
+        /** @type {Function|null} Relatives change handler (kept so destroy() can remove it). */
+        this._onRelativeChange = null;
+
+        /** @type {HTMLLabelElement|null} Label re-pointed at the alias (restored by destroy()). */
+        this._label = null;
+
+        /** @type {HTMLElement|null} This instance's loading bar element. */
+        this._loadingEl = null;
 
         /** @type {Object} Resolved options for this instance. */
         this._options = this._buildOptions(options);
 
         const p = String(this._options.classPrefix ?? '');
-        /** @type {Record<string, string>} Resolved CSS classes for this instance. */
+        /**
+         * Resolved CSS classes for this instance. `classPrefix` applies to every
+         * `flexdatalist-*` class that carries styles, so v3 can run next to v2 CSS.
+         * Not prefixed: the `flexdatalist` / `flexdatalist-set` markers on the
+         * original input (the auto-init selector; also keeps v2's auto-init from
+         * grabbing inputs v3 already set up), the v3-only `fdl-*` classes, and
+         * generic state classes scoped inside the prefixed containers.
+         * @type {Record<string, string>}
+         */
         this._classes = {
             // Input / setup
             root:              'flexdatalist',
             set:               'flexdatalist-set',
             alias:             p + 'flexdatalist-alias',
             multiple:          p + 'flexdatalist-multiple',
-            multipleValue:     'flexdatalist-multiple-value',
+            multipleValue:     p + 'flexdatalist-multiple-value',
             multipleFocus:     'focus',
 
             // Results container
-            results:           'flexdatalist-results',
-            resultsFetching:   'flexdatalist-fetching-results',
-            resultsLoaderItem: 'flexdatalist-fetching-results-loader',
+            results:           p + 'flexdatalist-results',
+            resultsFetching:   p + 'flexdatalist-fetching-results',
+            resultsLoaderItem: p + 'flexdatalist-fetching-results-loader',
 
             // Grouping (tabs)
             tabs:              'fdl-tabs',
@@ -341,10 +413,11 @@ class Flexdatalist {
             inputContainer:    'input-container',
             value:             'value',
             valueToggle:       'toggle',
+            valueMarked:       'marked',
             valueText:         'text',
             remove:            'fdl-remove',
-            collapsedItem:     'flexdatalist-collapsed-item',
-            collapsedControl:  'flexdatalist-collapsed-control',
+            collapsedItem:     p + 'flexdatalist-collapsed-item',
+            collapsedControl:  p + 'flexdatalist-collapsed-control',
 
             // Misc UI state (scoped; unprefixed)
             disabled:          'disabled',
@@ -353,9 +426,9 @@ class Flexdatalist {
             isAnimating:       'is-animating',
 
             // Loading state for input
-            loading:           'flexdatalist-loading',
-            fetching:          'flexdatalist-fetching',
-            fetchAnimation:    'flexdatalist-fetch-animation',
+            loading:           p + 'flexdatalist-loading',
+            fetching:          p + 'flexdatalist-fetching',
+            fetchAnimation:    p + 'flexdatalist-fetch-animation',
 
             // Results items
             item:              'item',
@@ -385,7 +458,13 @@ class Flexdatalist {
         this._setUp();
         this._bindAlias();
 
-        window.addEventListener('resize', () => this._position());
+        window.addEventListener('resize', this._onResize);
+        document.addEventListener('scroll', this._onResize, { capture: true, passive: true });
+        if (typeof ResizeObserver === 'function') {
+            this._resizeObserver = new ResizeObserver(this._onResize);
+            this._resizeObserver.observe(this._multipleEl ?? this._alias);
+        }
+        document.addEventListener('focusout', this._onDocumentFocusOut, true);
         this._cacheGC();
 
         // Save the initial value before selectionRequired's _clearValue wipes it.
@@ -422,6 +501,8 @@ class Flexdatalist {
             }, true);
         } else {
             this._applyDisabled(this._options.disabled);
+            // Fired synchronously here; listen on the element before constructing to catch it.
+            this._dispatch('init:flexdatalist', this._options);
         }
     }
 
@@ -457,19 +538,37 @@ class Flexdatalist {
         o.disabled = o.disabled === null ? el.hasAttribute('disabled') : o.disabled;
         o.originalValue = this._value;
 
-        // Normalise string → array options.
+        this._normalizeOptions(o, sep);
+        return o;
+    }
+
+    /**
+     * Normalise options that accept several forms, and derive the defaults
+     * that depend on other options. Used by the constructor and setOption().
+     *
+     * `textProperty` and `visibleProperties` default to `searchIn`; when they
+     * were derived (not set explicitly) they follow later `searchIn` changes.
+     *
+     * @private
+     * @param {Object} o   Options object (modified in place).
+     * @param {string} [sep] Separator for string → array options.
+     */
+    _normalizeOptions(o, sep = o.valuesSeparator) {
+        // String → array options.
         if (typeof o.searchIn === 'string') {
             o.searchIn = o.searchIn.split(sep).map(s => s.trim());
         }
-        if (!o.textProperty) {
+        if (!o.textProperty || this._autoTextProperty) {
+            this._autoTextProperty = true;
             o.textProperty = o.searchIn[0];
         }
         if (typeof o.visibleProperties === 'string') {
             o.visibleProperties = o.visibleProperties.length > 0
                 ? o.visibleProperties.split(sep).map(s => s.trim())
-                : [...o.searchIn];
+                : [];
         }
-        if (!o.visibleProperties?.length) {
+        if (!o.visibleProperties?.length || this._autoVisibleProperties) {
+            this._autoVisibleProperties = true;
             o.visibleProperties = [...o.searchIn];
         }
 
@@ -479,8 +578,6 @@ class Flexdatalist {
         } else if (o.relatives instanceof NodeList) {
             o.relatives = [...o.relatives];
         }
-
-        return o;
     }
 
     // =========================================================================
@@ -498,14 +595,59 @@ class Flexdatalist {
     }
 
     /**
+     * Options that shape the DOM built by the constructor; changing them needs
+     * `destroy()` and a new instance.
+     *
+     * @type {string[]}
+     */
+    static structuralOptions = ['multiple', 'classPrefix', 'resultsContainer'];
+
+    /**
      * Set a single option value at runtime.
+     *
+     * The value is normalised like constructor options (e.g. a `searchIn`
+     * string is split, a `relatives` selector is resolved), and options with
+     * side effects are applied: `disabled` / `readonly` update the widget,
+     * `relatives` / `chainedRelatives` re-bind the chained behaviour,
+     * `limitOfValues` / `collapseAfterN` refresh the tags.
+     * Structural options (`Flexdatalist.structuralOptions`) are ignored with
+     * a warning.
      *
      * @param {string} name  Option key.
      * @param {*}      value New value.
      * @returns {this} Chainable.
      */
     setOption(name, value) {
-        this._options[name] = value;
+        const o = this._options;
+
+        if (Flexdatalist.structuralOptions.includes(name)) {
+            if (o.debug) {
+                console.warn(`Flexdatalist: "${name}" cannot change after initialisation; destroy() the instance and create a new one.`);
+            }
+            return this;
+        }
+        if (name === 'disabled') {
+            this._applyDisabled(!!value);
+            return this;
+        }
+        if (name === 'readonly') {
+            this._applyReadonly(!!value);
+            return this;
+        }
+
+        const rebindChained = name === 'relatives' || name === 'chainedRelatives';
+        if (rebindChained) this._teardownChained();
+        if (name === 'textProperty') this._autoTextProperty = !value;
+        if (name === 'visibleProperties') this._autoVisibleProperties = !value?.length;
+
+        o[name] = value;
+        this._normalizeOptions(o);
+
+        if (rebindChained) this._setupChained();
+        if (name === 'limitOfValues') this._multipleHandleLimit();
+        if (name === 'collapseAfterN' || name === 'collapsedValuesText') {
+            if (this._multipleEl) this._multipleCollapse();
+        }
         return this;
     }
 
@@ -561,7 +703,10 @@ class Flexdatalist {
     /**
      * Remove a specific value (multiple mode only).
      *
-     * @param {string} val The serialised value to remove.
+     * With duplicate values (`allowDuplicateValues`), each value removes one
+     * tag: the first one holding it.
+     *
+     * @param {string|Array} val The serialised value(s) to remove.
      * @returns {this} Chainable.
      */
     removeValue(val) {
@@ -743,6 +888,7 @@ class Flexdatalist {
      * - `remove:flexdatalist.results` — dropdown is being removed
      * - `before:flexdatalist.data`    — before data loading
      * - `after:flexdatalist.data`     — data loaded
+     * - `error:flexdatalist`         — a remote request failed (`{ error, url }`)
      *
      * @param {string}   event    Event name (e.g. `'select:flexdatalist'`).
      * @param {Function} handler  Callback receiving the native CustomEvent.
@@ -780,11 +926,39 @@ class Flexdatalist {
         const container = this._multipleEl ?? this._alias;
         const classes = this._classes;
 
-        el.classList.remove(classes.root, classes.set);
+        // Stop timers and global/foreign listeners so nothing keeps this
+        // instance alive or runs against removed DOM after destruction.
+        this._destroyed = true;
+        clearTimeout(this._searchTimeout);
+        clearTimeout(this._leaveTimeout);
+        this._searchTimeout = null;
+        this._leaveTimeout = null;
+        document.removeEventListener('focusout', this._onDocumentFocusOut, true);
+        this._pendingRequests = [];
+        window.removeEventListener('resize', this._onResize);
+        document.removeEventListener('scroll', this._onResize, { capture: true });
+        this._resizeObserver?.disconnect();
+        this._resizeObserver = null;
+        if (this._repositionFrame !== null) {
+            (typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout)(this._repositionFrame);
+            this._repositionFrame = null;
+        }
+        this._teardownChained();
+        this._loadingStop();
+        if (!this._customContainer) {
+            this._resultsEl?.remove();
+        }
+        if (this._label && this._label.getAttribute('for') === this._alias?.id) {
+            this._label.setAttribute('for', el.id);
+        }
+        this._label = null;
+
+        el.classList.remove(classes.root, classes.set, classes.loading);
         el.style.position = '';
         el.style.top = '';
         el.style.left = '';
         el.removeAttribute('tabindex');
+        el.removeAttribute('aria-hidden');
         el.value = !clear && this._options?.originalValue ? this._options.originalValue : '';
 
         container?.remove();
@@ -838,10 +1012,11 @@ class Flexdatalist {
 
         // Re-point any <label> at the alias so click-to-focus works.
         if (el.id) {
-            document.querySelector(`label[for="${el.id}"]`)?.setAttribute('for', this._alias.id);
+            this._label = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+            this._label?.setAttribute('for', this._alias.id);
         }
 
-        this._setupChained(true);
+        this._setupChained();
     }
 
     /**
@@ -903,15 +1078,66 @@ class Flexdatalist {
     }
 
     /**
-     * Apply ARIA attributes to the alias input for screen-reader support.
+     * Apply ARIA attributes for screen readers (WAI-ARIA combobox pattern):
+     * the alias is a `combobox` controlling the results `listbox`, its
+     * `aria-expanded` follows the dropdown and `aria-activedescendant` the
+     * highlighted option. Labelling attributes of the original input are
+     * copied to the alias, and the original (off-screen) input is hidden
+     * from assistive technology.
      *
      * @private
      * @param {HTMLInputElement} alias
      */
     _setA11y(alias) {
+        const el = this._hiddenInput;
+        alias.setAttribute('role', 'combobox');
         alias.setAttribute('aria-autocomplete', 'list');
         alias.setAttribute('aria-expanded', 'false');
-        alias.setAttribute('aria-owns', alias.id + '-results');
+        alias.setAttribute('aria-controls', alias.id + '-results');
+        for (const attr of ['aria-label', 'aria-labelledby', 'aria-describedby', 'aria-required', 'aria-invalid']) {
+            if (el.hasAttribute(attr)) alias.setAttribute(attr, el.getAttribute(attr));
+        }
+        if (el.required && !alias.hasAttribute('aria-required')) {
+            alias.setAttribute('aria-required', 'true');
+        }
+        el.setAttribute('aria-hidden', 'true');
+    }
+
+    /**
+     * Highlight a result option (keyboard or mouse) and expose it through
+     * `aria-activedescendant`; `null` clears the highlight.
+     *
+     * @private
+     * @param {HTMLLIElement|null} item
+     */
+    _setActiveItem(item) {
+        const classes = this._classes;
+        this._resultsEl?.querySelectorAll(`li.${classes.item}.${classes.active}`).forEach(li => {
+            li.classList.remove(classes.active);
+            li.setAttribute('aria-selected', 'false');
+        });
+        const panel = item?.closest('ul');
+        if (item) {
+            item.classList.add(classes.active);
+            item.setAttribute('aria-selected', 'true');
+            this._alias.setAttribute('aria-activedescendant', item.id);
+            panel?.setAttribute('aria-activedescendant', item.id);
+            item.dispatchEvent(new CustomEvent('active:flexdatalist.results', { detail: item._fdItem }));
+        } else {
+            this._alias.removeAttribute('aria-activedescendant');
+            this._resultsEl?.querySelectorAll('[aria-activedescendant]').forEach(node => node.removeAttribute('aria-activedescendant'));
+        }
+    }
+
+    /**
+     * Mark the dropdown as open or closed on the alias (`aria-expanded`).
+     *
+     * @private
+     * @param {boolean} open
+     */
+    _setExpanded(open) {
+        this._alias?.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (!open) this._alias?.removeAttribute('aria-activedescendant');
     }
 
     /**
@@ -919,17 +1145,32 @@ class Flexdatalist {
      * relative inputs are empty.
      *
      * @private
-     * @param {boolean} init Whether this is the first call during setup.
      */
-    _setupChained(init) {
+    _setupChained() {
         const o = this._options;
         if (!o.relatives?.length || !o.chainedRelatives) return;
         const toggle = () => {
             const allEmpty = o.relatives.every(r => this._isEmpty(r.value));
             this._applyReadonly(allEmpty);
         };
+        this._onRelativeChange = toggle;
         for (const rel of o.relatives) rel.addEventListener('change', toggle);
         toggle();
+    }
+
+    /**
+     * Undo _setupChained(): remove the relatives' change listeners and the
+     * readonly state the chained behaviour applied.
+     *
+     * @private
+     */
+    _teardownChained() {
+        if (!this._onRelativeChange) return;
+        for (const rel of this._options.relatives ?? []) {
+            rel.removeEventListener('change', this._onRelativeChange);
+        }
+        this._onRelativeChange = null;
+        this._applyReadonly(false);
     }
 
     // =========================================================================
@@ -946,12 +1187,15 @@ class Flexdatalist {
 
         alias.addEventListener('focusin', () => {
             this._keyboardNavActive = false;
+            // Re-enable fetching disabled by the leave detection, so that e.g.
+            // click-to-show-all works again when the user comes back.
+            this._fetchDisabled = false;
             this._multipleEl?.classList.add(this._classes.multipleFocus);
-            this._actAddValueOnLeave();
         });
 
         alias.addEventListener('focusout', () => {
             this._multipleEl?.classList.remove(this._classes.multipleFocus);
+            if (this._multipleEl) this._unmarkTag();
             this._actClearText();
             this._actClearValue();
         });
@@ -992,8 +1236,7 @@ class Flexdatalist {
                 if (target && target === document.activeElement) continue;
                 if (!container.contains(e.target) && container !== e.target) {
                     fd._keyboardNavActive = false;
-                    container.remove();
-                    if (fd._resultsEl === container) fd._resultsEl = null;
+                    fd._resultsRemove();
                 }
             }
         });
@@ -1053,7 +1296,9 @@ class Flexdatalist {
             }
 
             const panel = instance._getActivePanel(container) ?? container;
-            const items = [...panel.querySelectorAll('li.item')];
+            // Selectable options only: the "No results" message is not one,
+            // the "add new item" entry is.
+            const items = [...panel.querySelectorAll('li.item:not(.no-results), li.item.add-new-item')];
             if (!items.length) {
                 return;
             }
@@ -1061,10 +1306,7 @@ class Flexdatalist {
             const custom = container._fdCustom;
 
             if (key === 'Escape') {
-                if (!custom) {
-                    container.remove();
-                    if (instance._resultsEl === container) instance._resultsEl = null;
-                }
+                if (!custom) instance._resultsRemove();
                 instance._keyboardNavActive = false;
                 instance._alias.focus();
                 return;
@@ -1075,8 +1317,7 @@ class Flexdatalist {
                 if (activeItem) { event.preventDefault(); activeItem.click(); }
                 else if (!custom) {
                     event.preventDefault();
-                    container.remove();
-                    if (instance._resultsEl === container) instance._resultsEl = null;
+                    instance._resultsRemove();
                 }
                 return;
             }
@@ -1088,13 +1329,12 @@ class Flexdatalist {
                 const activeIndex = (instance._keyboardNavActive && activeItem)
                     ? items.indexOf(activeItem)
                     : -1;
-                activeItem?.classList.remove('active');
 
                 const nextItem = key === 'ArrowDown'
                     ? (items[activeIndex + 1] ?? items[0])
                     : (items[activeIndex - 1] ?? items[items.length - 1]);
 
-                nextItem?.classList.add('active');
+                instance._setActiveItem(nextItem ?? null);
                 if (nextItem) {
                     panel.scrollTop = nextItem.offsetTop;
                     instance._keyboardNavActive = true;
@@ -1117,11 +1357,6 @@ class Flexdatalist {
                 }
             }
         });
-
-        // Auto-init on page load (same behaviour as the jQuery plugin).
-        document.addEventListener('DOMContentLoaded', () => {
-            Flexdatalist.init('input.flexdatalist:not(.flexdatalist-set):not(.autodiscover-disabled)');
-        });
     }
 
     // =========================================================================
@@ -1140,7 +1375,7 @@ class Flexdatalist {
 
         if (key === 'Tab') this._resultsRemove();
 
-        this._actKeypressValue(e, ','); // Comma → add tag
+        this._actKeypressValue(e, this._separatorKey()); // Separator key → add tag
         this._actBackspace(e);
 
         // Prevent form submission when Enter is pressed with no results.
@@ -1189,15 +1424,27 @@ class Flexdatalist {
     }
 
     /**
+     * The character that splits typed or pasted text into tags: the first
+     * non-space character of `valuesSeparator` (so `', '` still means `,`).
+     *
+     * @private
+     * @returns {string}
+     */
+    _separatorKey() {
+        return String(this._options.valuesSeparator ?? ',').trim()[0] ?? ',';
+    }
+
+    /**
      * Handle the `paste` event on the alias.
-     * Splits pasted text on commas and newlines, then adds each as a value.
+     * Splits pasted text on the values separator and newlines, then adds each
+     * part as a value.
      *
      * @private
      * @param {ClipboardEvent} e
      */
     _onPaste(e) {
         const o = this._options;
-        let text = e.clipboardData?.getData('text/plain') ?? '';
+        const text = e.clipboardData?.getData('text/plain') ?? '';
         if (!text) return;
 
         // Only intercept paste to create multiple free-text tags.
@@ -1205,18 +1452,17 @@ class Flexdatalist {
         if (!o.multiple || o.selectionRequired) return;
 
         // If the pasted text contains no separators, it's regular typing: let it paste.
+        const separator = this._separatorKey();
         const hasNewline = /[\r\n]/.test(text);
-        if (!hasNewline && !text.includes(',')) return;
+        if (!hasNewline && !text.includes(separator)) return;
 
         e.preventDefault();
         e.stopPropagation();
 
-        // Normalize newlines to comma separators.
-        text = text.replace(/\r\n|\n\r|\n|\r/g, ',');
-
         this.addValue(
             text
-                .split(',')
+                .split(/\r\n|\n\r|\n|\r/)
+                .flatMap(line => line.split(separator))
                 .map(v => v.trim())
                 .filter(v => v.length > 0)
         );
@@ -1248,29 +1494,43 @@ class Flexdatalist {
     }
 
     /**
-     * Start a recurring interval that commits a pending free-text value when
-     * focus leaves the widget (multiple + !selectionRequired only).
+     * Whether `node` is part of this widget: the alias, the tags wrapper or
+     * the results container.
+     *
+     * @private
+     * @param {Node|null} node
+     * @returns {boolean}
+     */
+    _ownsElement(node) {
+        if (!node) return false;
+        return node === this._alias
+            || !!this._multipleEl?.contains(node)
+            || !!this._resultsEl?.contains(node);
+    }
+
+    /**
+     * After focus left one of this widget's elements, check (once focus has
+     * settled) whether it left the widget altogether; if so, commit the
+     * pending free text as a tag (multiple + !selectionRequired only).
+     *
+     * Replaces the former 800 ms polling, which compared element ids and so
+     * never fired for inputs without an id (`'' === ''` for the body).
      *
      * @private
      */
-    _actAddValueOnLeave() {
-        const o = this._options;
-        if (this._leaveInterval || o.selectionRequired || !o.multiple) return;
-        const parentId = this._hiddenInput.id;
-
-        this._leaveInterval = setInterval(() => {
-            const activeId = (document.activeElement?.id ?? '').replace('-flexdatalist', '');
-            if (parentId === activeId || this._itemSelected || this._resultsEl?.contains(document.activeElement)) return;
+    _scheduleLeaveCheck() {
+        clearTimeout(this._leaveTimeout);
+        this._leaveTimeout = setTimeout(() => {
+            this._leaveTimeout = null;
+            if (this._destroyed || this._itemSelected || this._ownsElement(document.activeElement)) return;
 
             this._fetchDisabled = true;
-            if (this._alias.value.length > 0) {
+            const o = this._options;
+            if (o.multiple && !o.selectionRequired && this._alias.value.length > 0) {
                 this._extractValue(this._alias.value);
                 this._resultsRemove();
             }
-
-            clearInterval(this._leaveInterval);
-            this._leaveInterval = null;
-        }, 800);
+        }, 0);
     }
 
     /**
@@ -1280,40 +1540,42 @@ class Flexdatalist {
      * @param {KeyboardEvent|InputEvent} e
      */
     _actSearch(e) {
-        const key = e.key;
+        // Search only when the text actually changed. On keyup, keys such as
+        // Escape, Shift, Home or Ctrl+C would close and reopen the results.
+        if (e.type !== 'input') return;
         const o = this._options;
         const kw = this._alias.value;
 
         this._fetchDisabled = false;
         clearTimeout(this._searchTimeout);
 
-        // Ignore navigation keys (arrows, enter).
-        const navKeys = ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-        if (!key || !navKeys.includes(key)) {
-            this._searchTimeout = setTimeout(() => {
-                const len = kw.length;
-                if ((o.minLength === 0 && len > 0) || len >= o.minLength) {
-                    this._resultsRemove();
-                    this._resultsLoadingStart();
-                    this._dataLoad(data => {
-                        this._resultsLoadingStop();
-                        this._searchGet(kw, data, matches => this._resultsShow(matches));
-                    });
-                }
-            }, o.searchDelay);
-        }
+        this._searchTimeout = setTimeout(() => {
+            const len = kw.length;
+            if ((o.minLength === 0 && len > 0) || len >= o.minLength) {
+                this._resultsRemove();
+                this._resultsLoadingStart();
+                this._dataLoad(data => {
+                    this._resultsLoadingStop();
+                    this._searchGet(kw, data, matches => this._resultsShow(matches));
+                });
+            }
+        }, o.searchDelay);
     }
 
     /**
      * Copy alias text to the hidden input in single + !selectionRequired mode.
      *
+     * Only runs on `input` events, i.e. when the user actually changed the text.
+     * Running on `keyup` would overwrite a selected value (e.g. an id) with its
+     * display text when a non-editing key (Tab, arrows, Shift…) is released.
+     *
      * @private
-     * @param {KeyboardEvent} e
+     * @param {KeyboardEvent|InputEvent} e
      */
     _actCopyValue(e) {
-        if (e.key === 'Enter') return;
+        if (e.type !== 'input') return;
         const o = this._options;
-        if (!o.multiple && !o.selectionRequired && this._alias.value.length !== this._value.length) {
+        if (!o.multiple && !o.selectionRequired && this._alias.value !== String(this._value ?? '')) {
             this._extractValue(this._alias.value);
         }
     }
@@ -1326,29 +1588,51 @@ class Flexdatalist {
      */
     _actBackspace(e) {
         const o = this._options;
-        if (!o.removeOnBackspace || !o.multiple || e.key !== 'Backspace') return;
+        // keydown only: handling keyup as well made one press mark *and*
+        // remove the tag. Key repeat (holding Backspace) still removes tags
+        // one by one, two repeats each.
+        if (!o.removeOnBackspace || !o.multiple || e.type !== 'keydown') return;
 
-        if (!this._alias.value.length) {
-            const toRemove = this._alias._fdRemove;
-            if (toRemove) {
-                this._multipleRemove(toRemove.dataset.value);
-                this._alias._fdRemove = null;
-            } else {
-                const ic = this._multipleEl?.querySelector('li.' + this._classes.inputContainer);
-                this._alias._fdRemove = ic?.previousElementSibling ?? null;
-            }
-        } else {
-            this._alias._fdRemove = null;
+        if (e.key !== 'Backspace' || this._alias.value.length) {
+            this._unmarkTag();
+            return;
         }
+
+        const marked = this._alias._fdRemove;
+        if (marked?.isConnected) {
+            this._alias._fdRemove = null;
+            this._multipleRemove(marked);
+            return;
+        }
+        // Mark the last tag (skipping the "N More" control).
+        const tags = this._multipleEl?.querySelectorAll('li.' + this._classes.value);
+        const last = tags?.[tags.length - 1] ?? null;
+        last?.classList.add(this._classes.valueMarked);
+        this._alias._fdRemove = last;
+    }
+
+    /**
+     * Clear the "next Backspace removes this tag" mark.
+     *
+     * @private
+     */
+    _unmarkTag() {
+        this._alias._fdRemove?.classList.remove(this._classes.valueMarked);
+        this._alias._fdRemove = null;
     }
 
     /**
      * Show all results when `minLength` is 0 and alias is empty.
      *
+     * Triggered by a click, by clearing the text, or by arriving with Tab
+     * (whose keyup lands on the alias). Other keyups are ignored so that
+     * Escape does not immediately reopen the list it just closed.
+     *
      * @private
      * @param {Event} e
      */
     _actShowAll(e) {
+        if (e.type === 'keyup' && e.key !== 'Tab') return;
         if (!this._alias.value.trim() && this._options.minLength === 0) {
             this._dataLoad(data => this._resultsShow(data));
         }
@@ -1399,7 +1683,7 @@ class Flexdatalist {
      * @private
      * @param {string|Array|Object} values   The raw value(s) to load.
      * @param {Function}            [cb]     Called with resolved values.
-     * @param {boolean}             [init]   True during constructor init (suppresses events).
+     * @param {boolean}             [init]   True during constructor init (see _extractValue).
      */
     _loadValue(values, cb, init) {
         const o = this._options;
@@ -1419,7 +1703,11 @@ class Flexdatalist {
                 vProps = vProps.split(',');
             }
             if (!this._isObj(values)) {
-                values = values.split(',');
+                // Still a string here: in CSV multiple mode _toObj() already
+                // split it. A single value may itself contain commas.
+                values = o.multiple
+                    ? values.split(o.valuesSeparator).map(v => v.trim())
+                    : [values];
             } else if (!Array.isArray(values)) {
                 values = [values];
             }
@@ -1448,8 +1736,10 @@ class Flexdatalist {
             return;
         }
 
-        cb(values);
+        // Apply first: the constructor's callback dispatches init and resolves
+        // `ready`, which must see the value already in place.
         this._extractValue(values, init);
+        cb(values);
     }
 
     /**
@@ -1458,7 +1748,10 @@ class Flexdatalist {
      *
      * @private
      * @param {string|Array|Object} values
-     * @param {boolean} [init]  Suppress events when true.
+     * @param {boolean} [init]  True while loading the initial value: skips
+     *   `before:flexdatalist.value`. `after:flexdatalist.value`,
+     *   `change:flexdatalist` and `change` still fire, so listeners (and the
+     *   framework wrappers' bound value) learn the resolved initial value.
      */
     _extractValue(values, init) {
         if (!init) {
@@ -1472,10 +1765,6 @@ class Flexdatalist {
             }
         } else {
             result.push(this._extractOne(values));
-        }
-
-        if (init === false) {
-            return;
         }
 
         this._dispatch('after:flexdatalist.value', result);
@@ -1496,7 +1785,10 @@ class Flexdatalist {
         const o = this._options;
 
         if (o.multiple) {
-            if (!this._isEmpty(text) && !this._isDup(text)) {
+            // Enforce limitOfValues for every entry point (typing, addValue(),
+            // paste), not just by hiding the input once the limit is reached.
+            const limitReached = o.limitOfValues > 0 && this._texts.length >= o.limitOfValues;
+            if (!limitReached && !this._isEmpty(text) && !this._isDup(text)) {
                 this._texts.push(text);
                 this._multipleAdd(value, text);
             }
@@ -1576,8 +1868,10 @@ class Flexdatalist {
      * @param {boolean} [init]       Suppress events.
      */
     _clearValue(clearAlias, init) {
-        const prev = this._value;
         const o = this._options;
+        // Something to clear: a value, or tags (toggled-off tags leave the
+        // value empty but are still on screen).
+        const hadContent = String(this._value ?? '') !== '' || this._texts.length > 0;
 
         if (o.multiple) {
             this._multipleRemoveAll();
@@ -1588,7 +1882,7 @@ class Flexdatalist {
         if (clearAlias) {
             this._alias.value = '';
         }
-        if (prev !== '' && !init) {
+        if (hadContent && !init) {
             this._dispatch('change:flexdatalist', { value: '', text: '' });
             this._dispatch('clear:flexdatalist');
             this._dispatch('change');
@@ -1721,21 +2015,15 @@ class Flexdatalist {
         li.addEventListener('click', () => this._multipleToggle(li));
         li.querySelector('.' + this._classes.remove)?.addEventListener('click', e => {
             e.stopPropagation();
-            this._multipleRemove(li.dataset.value);
+            // Remove this very tag: with allowDuplicateValues, a lookup by
+            // value would remove the first tag holding the same value.
+            this._multipleRemove(li);
         });
 
-        // Push value into serialised storage.
-        // Use serialised comparison: `val` is always a string but `current` items
-        // may be parsed objects (JSON mode) or numbers (numeric valueProperty),
-        // so `Array.includes` would produce false negatives from the type mismatch.
-        const current = this.getValue();
-        const valNorm = this._toStr(this._toObj(val));
-        if (!current.some(item => this._toStr(item) === valNorm)) {
-            // CSV current is string[], JSON current is object[] — push the matching type.
-            current.push(this._isCSV() ? String(val) : this._toObj(val));
-            this._value = this._toStr(current);
-            this._hiddenInput.value = this._value;
-        }
+        // Rebuild the value from the tags. It used to skip values already
+        // present, so with allowDuplicateValues the tags showed "Apple" three
+        // times while only one "Apple" was submitted.
+        this._multipleSync();
 
         this._alias.value = '';
         this._multipleHandleLimit();
@@ -1764,11 +2052,7 @@ class Flexdatalist {
         this._dispatch('before:flexdatalist.toggle', togglePayload);
 
         li.classList.toggle(classes.disabled, action === 'disable');
-
-        this._value = this._toStr(
-            [...this._multipleEl.querySelectorAll(`li.${classes.valueToggle}:not(.${classes.disabled})`)].map(l => l.dataset.value)
-        );
-        this._hiddenInput.value = this._value;
+        this._multipleSync();
 
         this._dispatch('after:flexdatalist.toggle', togglePayload);
         this._dispatch('change:flexdatalist', this._changePayload());
@@ -1776,29 +2060,52 @@ class Flexdatalist {
     }
 
     /**
-     * Remove a tag by its serialised value.
+     * Rebuild the stored value and the display-text list from the tag
+     * elements. Toggled-off tags (`toggleSelected`) keep their text but are
+     * left out of the value. JSON tags are parsed back to objects so they are
+     * not double-encoded.
      *
      * @private
-     * @param {string} val Serialised value (matches `li.dataset.value`).
+     */
+    _multipleSync() {
+        if (!this._multipleEl) return;
+        const classes = this._classes;
+        const tags = [...this._multipleEl.querySelectorAll('li.' + classes.value)];
+        this._texts = tags.map(tag => tag.dataset.text);
+        const active = tags
+            .filter(tag => !tag.classList.contains(classes.disabled))
+            .map(tag => this._isCSV() ? tag.dataset.value : this._toObj(tag.dataset.value));
+        this._value = this._toStr(active);
+        this._hiddenInput.value = this._value;
+    }
+
+    /**
+     * Remove a tag, given the tag element itself or its serialised value. With
+     * duplicate values (`allowDuplicateValues`) a value removes the first tag
+     * holding it.
+     *
+     * @private
+     * @param {string|HTMLLIElement} val Tag element, or serialised value (matches `li.dataset.value`).
      * @returns {{ value: string, text: string }|undefined} Removed item data.
      */
     _multipleRemove(val) {
-        const li = this._multipleFindLi(val);
+        const li = val instanceof HTMLElement ? val : this._multipleFindLi(val);
         if (!li) {
             return;
         }
 
-        const all = [...this._multipleEl.querySelectorAll('li:not(.input-container)')];
-        const idx = all.indexOf(li);
         const arg = { value: li.dataset.value, text: li.dataset.text };
 
-        const current = this.getValue();
-        current.splice(idx, 1);
-        this._value = this._toStr(current);
-        this._hiddenInput.value = this._value;
-        this._texts.splice(idx, 1);
+        // Rebuild from the DOM rather than splicing by position: the stored
+        // value omits toggled-off tags, so DOM indexes did not match it.
         li.remove();
+        this._multipleSync();
         this._multipleHandleLimit();
+        // Refresh the "N More" control if the tags are currently collapsed
+        // (left alone when the user expanded them).
+        if (this._multipleEl.querySelector('li.' + this._classes.collapsedControl)) {
+            this._multipleCollapse();
+        }
 
         this._dispatch('after:flexdatalist.remove', this._changePayload());
         this._dispatch('change:flexdatalist', this._changePayload());
@@ -1891,9 +2198,9 @@ class Flexdatalist {
         const classes = this._classes;
         if (o.collapseAfterN === false) return;
         const items = [...this._multipleEl.querySelectorAll('li.' + classes.value)];
-        if (items.length <= o.collapseAfterN) return;
 
-        this._multipleExpand(); // reset first
+        this._multipleExpand(); // reset first (also drops a stale "N More")
+        if (items.length <= o.collapseAfterN) return;
 
         items.forEach((item, i) => {
             if (i + 1 > o.collapseAfterN) item.classList.add(classes.collapsedItem);
@@ -1936,7 +2243,9 @@ class Flexdatalist {
      *                             (used during initialisation to pre-populate).
      */
     _dataLoad(callback, load) {
-        if (this._fetchDisabled) return;
+        // _fetchDisabled stops searches after focus left the widget; value
+        // loads (setValue/addValue, which pass `load`) must still run.
+        if (this._fetchDisabled && load === undefined) return;
         this._dispatch('before:flexdatalist.data');
 
         let data = [];
@@ -1966,11 +2275,17 @@ class Flexdatalist {
         if (typeof o.data === 'string') {
             const cached = this._cacheRead(o.data, true);
             if (cached) { callback(cached); return; }
-            this._request({ url: o.data, success: data => {
-                o.data = data;
-                callback(data);
-                this._cacheWrite(o.data, data, o.cacheLifetime, true);
-            }});
+            const dataUrl = o.data;
+            this._request({
+                url: dataUrl,
+                success: data => {
+                    o.data = data;
+                    callback(data);
+                    this._cacheWrite(dataUrl, data, o.cacheLifetime, true);
+                },
+                // Keep o.data as the URL so the next load retries.
+                error: () => callback(null),
+            });
         } else {
             if (!Array.isArray(o.data)) o.data = [];
             callback(o.data);
@@ -2013,18 +2328,23 @@ class Flexdatalist {
 
         const keyword = this._alias.value;
         const relatives = this._relativesData();
-        const cacheKey = this._cacheKeyGen(
-            { relative: relatives, load, keyword, contain: o.searchContain }, o.url
-        );
+        const params = typeof o.params === 'function'
+            ? o.params.call(this._hiddenInput, keyword)
+            : { ...o.params };
+
+        // Everything that changes the response must be part of the key, or two
+        // instances sharing a url (but not params/method) get each other's data.
+        // (The url used to be passed as the numeric hash seed, where a string
+        // coerces to 0, so it was silently left out of the key.)
+        const cacheKey = this._cacheKeyGen({
+            url: o.url, relative: relatives, params, load, keyword, contain: o.searchContain,
+            method: o.requestType, resultsProperty: o.resultsProperty,
+        });
         const cached = this._cacheRead(cacheKey, true);
         if (cached) {
             callback(cached);
             return;
         }
-
-        const params = typeof o.params === 'function'
-            ? o.params.call(this._hiddenInput, keyword)
-            : { ...o.params };
 
         const data = { ...relatives, ...params, selected: this._value, original: o.originalValue };
         if (load !== undefined){
@@ -2035,10 +2355,14 @@ class Flexdatalist {
 
         this._request({
             url: o.url, data,
+            // A newer search supersedes a queued one; value loads must all run.
+            replaceable: load === undefined,
             success: _data => {
                 callback(_data);
                 this._cacheWrite(cacheKey, _data, o.cacheLifetime, true);
             },
+            // Carry on with static/datalist data so callers (and `ready`) settle.
+            error: () => callback(null),
         });
     }
 
@@ -2046,20 +2370,29 @@ class Flexdatalist {
      * Execute a fetch request, applying method, headers, and content-type.
      *
      * @private
-     * @param {{ url: string, data?: Object, success: Function }} settings
+     * Requests run one at a time. While one is in flight, later ones are
+     * queued: every value load is kept (each has a callback that must run,
+     * e.g. pasting "a,b,c" or the initial value), while a queued search
+     * (`replaceable`) is superseded by a newer search.
+     *
+     * On a network/HTTP/JSON error, `settings.error` is called and an
+     * `error:flexdatalist` event is dispatched, so callers never hang.
+     *
+     * @private
+     * @param {{ url: string, data?: Object, success: Function, error?: Function, replaceable?: boolean }} settings
      */
     _request(settings) {
         const o = this._options;
         const el = this._hiddenInput;
         const classes = this._classes;
-        if (el.classList.contains(classes.loading)) {
-            // A fetch is already in-flight. Save this request as pending so its
-            // callback is not silently dropped (e.g. init value-load vs. a fast
-            // server that triggers a second _dataLoad before the first resolves).
-            this._pendingRequest = settings;
+        if (this._requestInFlight) {
+            if (settings.replaceable) {
+                this._pendingRequests = this._pendingRequests.filter(queued => !queued.replaceable);
+            }
+            this._pendingRequests.push(settings);
             return;
         }
-        this._pendingRequest = null;
+        this._requestInFlight = true;
         el.classList.add(classes.loading);
 
         let url = settings.url;
@@ -2080,28 +2413,48 @@ class Flexdatalist {
                 fetchOpts.body = JSON.stringify(settings.data ?? {});
             } else {
                 fetchOpts.headers = { ...(fetchOpts.headers ?? {}), 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' };
-                fetchOpts.body = new URLSearchParams(settings.data ?? {}).toString();
+                fetchOpts.body = this._encodeParams(settings.data);
             }
         } else if (settings.data) {
-            url += (url.includes('?') ? '&' : '?') + new URLSearchParams(settings.data).toString();
+            url += (url.includes('?') ? '&' : '?') + this._encodeParams(settings.data);
         }
 
         fetch(url, fetchOpts)
-            .then(r => r.json())
-            .then(data => settings.success(this._extractRemoteData(data)))
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status} ${response.statusText}`.trim());
+                }
+                return response.json();
+            })
+            .then(
+                data => {
+                    // The instance was destroyed while the request was in flight.
+                    if (this._destroyed) return;
+                    settings.success(this._extractRemoteData(data));
+                },
+                err => {
+                    if (this._destroyed) return;
+                    if (o.debug) {
+                        console.error('Flexdatalist fetch error:', err);
+                    }
+                    this._dispatch('error:flexdatalist', { error: err, url: settings.url });
+                    settings.error?.(err);
+                },
+            )
             .catch(err => {
+                // An exception thrown by a success/error callback.
                 if (o.debug) {
-                    console.error('Flexdatalist fetch error:', err);
+                    console.error('Flexdatalist error:', err);
                 }
             })
             .finally(() => {
+                this._requestInFlight = false;
+                // After destroy() the element may already belong to a new instance.
+                if (this._destroyed) return;
                 el.classList.remove(classes.loading);
-                // If a request arrived while this one was in-flight, run it now.
-                if (this._pendingRequest) {
-                    const pending = this._pendingRequest;
-                    this._pendingRequest = null;
-                    this._request(pending);
-                }
+                // Run the next request queued while this one was in flight.
+                const next = this._pendingRequests.shift();
+                if (next) this._request(next);
             });
     }
 
@@ -2119,10 +2472,47 @@ class Flexdatalist {
         if (typeof d === 'string' && d.startsWith('[{')) {
             d = JSON.parse(d);
         }
-        if (d?.options) {
-            Object.assign(this._options, d.options);
+        // Option overrides sit next to the results ({ results: [...], options: {...} }).
+        // They used to be read from the results array itself, so they were never applied.
+        const serverOptions = this._isObj(data) && !Array.isArray(data) ? data.options : undefined;
+        if (this._isObj(serverOptions)) {
+            for (const [name, value] of Object.entries(serverOptions)) {
+                this.setOption(name, value);
+            }
         }
         return this._isObj(d) ? d : [];
+    }
+
+    /**
+     * Encode request data as `application/x-www-form-urlencoded` (query string
+     * or POST body), flattening nested objects and arrays into bracket keys
+     * like jQuery's `$.param` (v2 behaviour) — `relatives[country]=PT`,
+     * `ids[]=1&ids[]=2`, `items[0][id]=1` — which PHP, Rails, Express (qs)…
+     * parse back into structures. Plain `URLSearchParams` sent nested values
+     * as `[object Object]` and arrays as `1,2`.
+     *
+     * `null` becomes an empty string; `undefined` and functions are skipped.
+     *
+     * @private
+     * @param {Object} [data]
+     * @returns {string}
+     */
+    _encodeParams(data) {
+        const pairs = [];
+        const add = (key, value) => {
+            if (value === undefined || typeof value === 'function') return;
+            if (value === null) {
+                pairs.push([key, '']);
+            } else if (Array.isArray(value)) {
+                value.forEach((entry, index) => add(this._isObj(entry) ? `${key}[${index}]` : `${key}[]`, entry));
+            } else if (typeof value === 'object') {
+                for (const [subKey, subValue] of Object.entries(value)) add(`${key}[${subKey}]`, subValue);
+            } else {
+                pairs.push([key, String(value)]);
+            }
+        };
+        for (const [key, value] of Object.entries(data ?? {})) add(key, value);
+        return new URLSearchParams(pairs).toString();
     }
 
     /**
@@ -2154,21 +2544,25 @@ class Flexdatalist {
     _loadingStart() {
         const target = this._multipleEl ?? this._alias;
         const classes = this._classes;
+        this._loadingStop();
         target.classList.add(classes.fetching);
         const anim = document.createElement('div');
         anim.className = classes.fetchAnimation;
         anim._fdTarget = target;
         document.body.appendChild(anim);
         this._position(anim, target);
+        this._loadingEl = anim;
     }
 
     /**
-     * Remove the loading bar.
+     * Remove this instance's loading bar (other instances keep theirs).
      *
      * @private
      */
     _loadingStop() {
-        document.querySelectorAll('.' + this._classes.fetchAnimation).forEach(el => el.remove());
+        this._loadingEl?.remove();
+        this._loadingEl = null;
+        (this._multipleEl ?? this._alias)?.classList.remove(this._classes.fetching);
     }
 
     // =========================================================================
@@ -2176,7 +2570,12 @@ class Flexdatalist {
     // =========================================================================
 
     /**
-     * Filter `data` against `keywords`, caching results in localStorage.
+     * Filter `data` against `keywords`.
+     *
+     * Results are not cached: the former localStorage cache was keyed by the
+     * keyword alone, so it was shared by every instance on the origin (two
+     * fields searching "Por" got each other's matches) and went stale after
+     * the data or the selected tags changed. Local filtering is cheap.
      *
      * @private
      * @param {string}   keywords  The typed keyword string.
@@ -2187,12 +2586,6 @@ class Flexdatalist {
         const o = this._options;
         if (o.searchDisabled) {
             callback(data);
-            return;
-        }
-
-        const cached = this._cacheRead(keywords);
-        if (cached) {
-            callback(cached);
             return;
         }
 
@@ -2213,7 +2606,6 @@ class Flexdatalist {
             }
         }
 
-        this._cacheWrite(keywords, matches, 2);
         this._dispatch('after:flexdatalist.search', { keywords, data, results: matches });
         callback(matches);
     }
@@ -2231,7 +2623,9 @@ class Flexdatalist {
     _searchMatch(item, keywords) {
         const o = this._options;
         const out = { ...item };
-        const found = [];
+        // Distinct keywords matched in any property (a Set, so a word found in
+        // two properties is not counted twice).
+        const found = new Set();
 
         for (const prop of o.searchIn) {
             const raw = this._prop(item, prop);
@@ -2244,7 +2638,7 @@ class Flexdatalist {
 
             for (const kw of keywords) {
                 if (this._searchFind(kw, parts)) {
-                    found.push(kw);
+                    found.add(kw);
                     hl = this._hlMark(kw, hl);
                 }
             }
@@ -2253,7 +2647,13 @@ class Flexdatalist {
             }
         }
 
-        if (!found.length || (o.searchByWord && found.length < keywords.length - 1)) {
+        if (!found.size) {
+            return false;
+        }
+        // searchByWord: keywords = [whole phrase, ...words]. Match when the
+        // whole phrase matched, or else when every individual word did.
+        const [phrase, ...words] = keywords;
+        if (o.searchByWord && words.length && !found.has(phrase) && !words.every(word => found.has(word))) {
             return false;
         }
         return out;
@@ -2276,14 +2676,16 @@ class Flexdatalist {
     }
 
     /**
-     * Replace sentinel tokens with `<span class="highlight">…</span>`.
+     * Escape `str` for HTML, then replace sentinel tokens with
+     * `<span class="highlight">…</span>`. The sentinels contain no HTML
+     * special characters, so they survive escaping untouched.
      *
      * @private
-     * @param {string} str  Text containing sentinel tokens.
-     * @returns {string} HTML string with highlight spans.
+     * @param {string} str  Raw text containing sentinel tokens.
+     * @returns {string} Safe HTML string with highlight spans.
      */
     _hlWrap(str) {
-        return str.split('|:|').join('<span class="highlight">').split('|::|').join('</span>');
+        return this._escape(str).split('|:|').join('<span class="highlight">').split('|::|').join('</span>');
     }
 
     /**
@@ -2325,7 +2727,8 @@ class Flexdatalist {
             const extra = [];
             for (const kw of kws) {
                 if (kw.includes(' ')) {
-                    extra.push(...kw.split(' '));
+                    // Collapse repeated spaces: an empty "word" matches everything.
+                    extra.push(...kw.split(/\s+/).filter(Boolean));
                 }
             }
             kws = [...kws, ...extra];
@@ -2417,19 +2820,32 @@ class Flexdatalist {
                 this._dispatch('select:flexdatalist', item);
                 this._itemSelected = true;
                 setTimeout(() => { this._itemSelected = false; }, 1000);
-                if (o.multiple) setTimeout(() => this._alias.focus(), 500);
+                if (o.multiple) {
+                    // Return focus to the alias to keep adding tags — unless the
+                    // user has meanwhile moved to another field: refocusing then
+                    // stole focus and split their typing between two inputs.
+                    setTimeout(() => {
+                        const active = document.activeElement;
+                        if (this._destroyed) return;
+                        if (!active || active === document.body || this._ownsElement(active)) {
+                            this._alias.focus();
+                        }
+                    }, 500);
+                }
             });
             li.addEventListener('mouseenter', () => {
                 this._keyboardNavActive = false;
-                const host = li.closest('ul') ?? container;
-                [...host.querySelectorAll(`li.${classes.item}.${classes.active}`)].forEach(l => l.classList.remove(classes.active));
-                li.classList.add(classes.active);
-                li.dispatchEvent(new CustomEvent('active:flexdatalist.results', { detail: li._fdItem }));
+                this._setActiveItem(li);
             });
-            li.addEventListener('mouseleave', () => li.classList.remove(classes.active));
+            li.addEventListener('mouseleave', () => {
+                if (li.classList.contains(classes.active)) this._setActiveItem(null);
+            });
         }
 
-        if (o.focusFirstResult) (this._getActivePanel(container) ?? container).querySelector('li.' + classes.item)?.classList.add(classes.active);
+        if (o.focusFirstResult) {
+            const first = (this._getActivePanel(container) ?? container).querySelector('li.' + classes.item);
+            if (first) this._setActiveItem(first);
+        }
     }
 
     /**
@@ -2439,27 +2855,40 @@ class Flexdatalist {
      * @param {string} text  Message template (may contain `{keyword}`).
      */
     _resultsEmpty(text) {
-        if (this._isEmpty(text)) {
+        const o  = this._options;
+        const kw = this._alias.value;
+        const showAddNew = o.showAddNewItem && kw.length > 0;
+
+        // Nothing to show: remove the (already emptied) container instead of
+        // leaving a blank dropdown on screen. An empty noResultsText must not
+        // suppress the "add new item" option either.
+        if (!showAddNew && this._isEmpty(text)) {
+            this._resultsRemove();
             return;
         }
         const container = this._resultsContainer();
-        const o  = this._options;
-        const kw = this._alias.value;
 
-        if (o.showAddNewItem && kw.length > 0) {
+        if (showAddNew) {
             const li = document.createElement('li');
             const classes = this._classes;
             li.className = `${classes.item} ${classes.noResults} ${classes.addNewItem}`;
             li.innerHTML = o.addNewItemText.replace('{keyword}', this._escape(kw));
             li._fdItem = { isAddNew: true, keyword: kw };
+            li.id = this._nextOptionId();
+            li.setAttribute('role', 'option');
+            li.setAttribute('aria-selected', 'false');
             container.appendChild(li);
             li.addEventListener('click', () => { this._resultsRemove(); this._dispatch('addnew:flexdatalist', kw); });
-            li.addEventListener('mouseenter', () => li.classList.add(classes.active));
-            li.addEventListener('mouseleave', () => li.classList.remove(classes.active));
+            li.addEventListener('mouseenter', () => this._setActiveItem(li));
+            li.addEventListener('mouseleave', () => {
+                if (li.classList.contains(classes.active)) this._setActiveItem(null);
+            });
         } else {
             const li = document.createElement('li');
             const classes = this._classes;
             li.className = `${classes.item} ${classes.noResults}`;
+            // Announced by screen readers, but not a selectable option.
+            li.setAttribute('role', 'status');
             li.textContent = text.replace('{keyword}', kw);
             container.appendChild(li);
         }
@@ -2500,7 +2929,9 @@ class Flexdatalist {
         const classes = this._classes;
         const li = document.createElement('li');
         li.className = classes.item;
+        li.id = this._nextOptionId();
         li.setAttribute('role', 'option');
+        li.setAttribute('aria-selected', 'false');
         li.setAttribute('tabindex', '-1');
         li.setAttribute('aria-posinset', idx + 1);
         li.setAttribute('aria-setsize', total);
@@ -2509,7 +2940,8 @@ class Flexdatalist {
         for (const vp of o.visibleProperties) {
             let el;
             if (vp.includes('{')) {
-                const str = this._replacePlaceholders(item, vp, '');
+                // The pattern is developer-provided markup; only the item values are escaped.
+                const str = this._replacePlaceholders(item, vp, '', true);
                 const parsed = this._parsePlaceholders(vp);
                 el = document.createElement('span');
                 el.className = 'prop-' + (Object.values(parsed ?? {}).join('-') || vp);
@@ -2578,7 +3010,10 @@ class Flexdatalist {
             }
             el._fdTarget = this._multipleEl ?? this._alias;
             el._fdInput = this._hiddenInput;
+            if (!el.id) el.id = this._alias.id + '-results';
+            this._alias.setAttribute('aria-controls', el.id);
             this._resultsEl = el;
+            this._setExpanded(true);
             return el;
         }
 
@@ -2614,7 +3049,20 @@ class Flexdatalist {
         parent.appendChild(container);
         this._position(container, target);
         this._resultsEl = container;
+        this._setExpanded(true);
         return container;
+    }
+
+    /**
+     * Return a unique id for a result option (referenced by
+     * `aria-activedescendant`).
+     *
+     * @private
+     * @returns {string}
+     */
+    _nextOptionId() {
+        this._optionCounter = (this._optionCounter ?? 0) + 1;
+        return `${this._alias.id}-option-${this._optionCounter}`;
     }
 
     /**
@@ -2681,7 +3129,7 @@ class Flexdatalist {
             const nextPanel = panels[nextIdx];
 
             // Clear any keyboard-highlighted item from the panel being left.
-            prevPanel?.querySelectorAll('li.item.active').forEach(item => item.classList.remove('active'));
+            this._setActiveItem(null);
             const dir = nextIdx > prevIdx ? 1 : -1;
 
             tabs.forEach((t, i) => {
@@ -2748,7 +3196,7 @@ class Flexdatalist {
 
         groupNames.forEach((groupName, idx) => {
             const items = grouped[groupName] ?? [];
-            const groupText = items.length ? this._hlProp(items[0], groupBy, groupName) : String(groupName);
+            const groupText = items.length ? this._hlProp(items[0], groupBy, groupName) : this._escape(groupName);
 
             const tabId = `${baseId}-tab-${idx}`;
             const panelId = `${baseId}-panel-${idx}`;
@@ -2822,21 +3270,21 @@ class Flexdatalist {
     }
 
     /**
-     * Return the highlighted value of `property` for `item`, falling back to
-     * the raw property value or `fallback`.
+     * Return the highlighted value of `property` for `item` as safe HTML,
+     * falling back to the escaped raw property value or `fallback`.
      *
      * @private
      * @param {Object} item
      * @param {string} property
      * @param {string} [fallback='']
-     * @returns {string}
+     * @returns {string} HTML-safe string.
      */
     _hlProp(item, property, fallback = '') {
         const hl = this._prop(item, property + '_highlight');
         if (hl !== undefined) {
             return hl;
         }
-        return String(this._prop(item, property) ?? fallback);
+        return this._escape(this._prop(item, property) ?? fallback);
     }
 
     /**
@@ -2871,6 +3319,7 @@ class Flexdatalist {
      */
     _resultsLoadingStop() {
         const classes = this._classes;
+        this._setExpanded(false);
         if (this._customContainer) {
             this._customContainer.replaceChildren();
             this._customContainer.classList.remove(classes.resultsFetching);
@@ -2891,6 +3340,7 @@ class Flexdatalist {
      */
     _resultsRemove(itemsOnly = false) {
         this._dispatch('remove:flexdatalist.results');
+        if (!itemsOnly) this._setExpanded(false);
         if (this._customContainer) {
             this._customContainer.replaceChildren();
         } else {
@@ -3046,9 +3496,15 @@ class Flexdatalist {
         if (!this._cacheSupported()) {
             return;
         }
-        localStorage.setItem(this._cacheKeyGen(key, undefined, global), JSON.stringify({
-            value, timestamp: Math.round(Date.now() / 1000), lifetime: lifetime || false,
-        }));
+        try {
+            localStorage.setItem(this._cacheKeyGen(key, undefined, global), JSON.stringify({
+                value, timestamp: Math.round(Date.now() / 1000), lifetime: lifetime || false,
+            }));
+        } catch (err) {
+            // QuotaExceededError (large data sets, Safari private mode…):
+            // caching is best-effort and must never break a search.
+            if (this._options.debug) console.warn('Flexdatalist: could not write cache.', err);
+        }
     }
 
     /**
@@ -3064,11 +3520,10 @@ class Flexdatalist {
             return null;
         }
         const k = this._cacheKeyGen(key, undefined, global);
-        const raw = localStorage.getItem(k);
-        if (!raw) {
+        const obj = this._cacheParse(k);
+        if (!obj) {
             return null;
         }
-        const obj = JSON.parse(raw);
         if (obj.lifetime && (Math.round(Date.now() / 1000) - obj.timestamp) >= obj.lifetime) {
             localStorage.removeItem(k);
             return null;
@@ -3089,11 +3544,33 @@ class Flexdatalist {
             if (!key.startsWith('fdl-')) {
                 continue;
             }
-            const obj = JSON.parse(localStorage.getItem(key));
+            const obj = this._cacheParse(key);
             if (obj?.lifetime && (Math.round(Date.now() / 1000) - obj.timestamp) >= obj.lifetime) {
                 localStorage.removeItem(key);
             }
         }
+    }
+
+    /**
+     * Read and parse a cache entry. A corrupt or foreign entry under an
+     * `fdl-` key is removed instead of throwing (which used to break the
+     * constructor via _cacheGC()).
+     *
+     * @private
+     * @param {string} key Full localStorage key.
+     * @returns {{ value: *, timestamp: number, lifetime: number|false }|null}
+     */
+    _cacheParse(key) {
+        try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return null;
+            const obj = JSON.parse(raw);
+            if (obj && typeof obj === 'object' && 'value' in obj) return obj;
+        } catch (_) {
+            // fall through: invalid JSON
+        }
+        try { localStorage.removeItem(key); } catch (_) {}
+        return null;
     }
 
     /**
@@ -3192,9 +3669,10 @@ class Flexdatalist {
      * @param {Object} item      Data source object.
      * @param {string} pattern   Pattern string, e.g. `'{name} ({city})'`.
      * @param {*}      fallback  Returned when pattern is empty or no match.
+     * @param {boolean} [escapeValues=false] HTML-escape the substituted values.
      * @returns {string|*}
      */
-    _replacePlaceholders(item, pattern, fallback) {
+    _replacePlaceholders(item, pattern, fallback, escapeValues = false) {
         if (!this._isObj(item) || typeof pattern !== 'string') {
             return fallback;
         }
@@ -3205,7 +3683,9 @@ class Flexdatalist {
         for (const [token, key] of Object.entries(props)) {
             const v = this._prop(item, key);
             if (v !== undefined) {
-                pattern = pattern.replace(token, v);
+                // Function replacer: `$&`, `$1`… inside values must stay literal.
+                const replacement = escapeValues ? this._escape(v) : String(v);
+                pattern = pattern.replace(token, () => replacement);
             }
         }
         return pattern;
