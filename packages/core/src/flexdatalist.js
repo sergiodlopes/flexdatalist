@@ -2806,7 +2806,18 @@ class Flexdatalist {
                 this._dispatch('select:flexdatalist', item);
                 this._itemSelected = true;
                 setTimeout(() => { this._itemSelected = false; }, 1000);
-                if (o.multiple) setTimeout(() => this._alias.focus(), 500);
+                if (o.multiple) {
+                    // Return focus to the alias to keep adding tags — unless the
+                    // user has meanwhile moved to another field: refocusing then
+                    // stole focus and split their typing between two inputs.
+                    setTimeout(() => {
+                        const active = document.activeElement;
+                        if (this._destroyed) return;
+                        if (!active || active === document.body || this._ownsElement(active)) {
+                            this._alias.focus();
+                        }
+                    }, 500);
+                }
             });
             li.addEventListener('mouseenter', () => {
                 this._keyboardNavActive = false;
