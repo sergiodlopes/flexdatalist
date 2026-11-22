@@ -9,6 +9,7 @@
 //
 //   docs-dist/
 //     index.html, examples.html, demo-api.js, demo-data.js, countries.json
+//     llms.txt                (from packages/core, served at /llms.txt)
 //     core/flexdatalist.js
 //     core/flexdatalist.css
 //
@@ -58,6 +59,10 @@ for (const pluginFile of pluginFiles) {
     await copyFile(join(coreSourceFolder, pluginFile), join(outputFolder, 'core', pluginFile));
     builtFiles.push('core/' + pluginFile);
 }
+
+// The llms.txt convention serves the file from the site root.
+await copyFile(join(repositoryRoot, 'packages/core/llms.txt'), join(outputFolder, 'llms.txt'));
+builtFiles.push('llms.txt');
 
 console.log(`Docs built in ${relative(repositoryRoot, outputFolder)}/ (${builtFiles.length} files):`);
 for (const builtFile of builtFiles) console.log('  ' + builtFile);
