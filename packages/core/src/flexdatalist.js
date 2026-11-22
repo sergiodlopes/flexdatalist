@@ -1281,7 +1281,7 @@ class Flexdatalist {
 
         if (key === 'Tab') this._resultsRemove();
 
-        this._actKeypressValue(e, ','); // Comma → add tag
+        this._actKeypressValue(e, this._separatorKey()); // Separator key → add tag
         this._actBackspace(e);
 
         // Prevent form submission when Enter is pressed with no results.
@@ -1330,15 +1330,27 @@ class Flexdatalist {
     }
 
     /**
+     * The character that splits typed or pasted text into tags: the first
+     * non-space character of `valuesSeparator` (so `', '` still means `,`).
+     *
+     * @private
+     * @returns {string}
+     */
+    _separatorKey() {
+        return String(this._options.valuesSeparator ?? ',').trim()[0] ?? ',';
+    }
+
+    /**
      * Handle the `paste` event on the alias.
-     * Splits pasted text on commas and newlines, then adds each as a value.
+     * Splits pasted text on the values separator and newlines, then adds each
+     * part as a value.
      *
      * @private
      * @param {ClipboardEvent} e
      */
     _onPaste(e) {
         const o = this._options;
-        let text = e.clipboardData?.getData('text/plain') ?? '';
+        const text = e.clipboardData?.getData('text/plain') ?? '';
         if (!text) return;
 
         // Only intercept paste to create multiple free-text tags.
@@ -1346,18 +1358,17 @@ class Flexdatalist {
         if (!o.multiple || o.selectionRequired) return;
 
         // If the pasted text contains no separators, it's regular typing: let it paste.
+        const separator = this._separatorKey();
         const hasNewline = /[\r\n]/.test(text);
-        if (!hasNewline && !text.includes(',')) return;
+        if (!hasNewline && !text.includes(separator)) return;
 
         e.preventDefault();
         e.stopPropagation();
 
-        // Normalize newlines to comma separators.
-        text = text.replace(/\r\n|\n\r|\n|\r/g, ',');
-
         this.addValue(
             text
-                .split(',')
+                .split(/\r\n|\n\r|\n|\r/)
+                .flatMap(line => line.split(separator))
                 .map(v => v.trim())
                 .filter(v => v.length > 0)
         );
