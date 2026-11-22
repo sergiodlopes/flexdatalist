@@ -8,7 +8,7 @@
  *
  * @author Sergio Dinis Lopes <flexdatalist@sergiodinislopes.pt>
  * @copyright 2016-2026 Sergio Dinis Lopes
- * @version 3.2.0
+ * @version 3.2.1
  * @license MIT
  *
  * Basic usage
@@ -1721,7 +1721,7 @@ class Flexdatalist {
                             if (this._prop(item, prop) === undefined) {
                                 continue;
                             }
-                            if (String(cmp) !== String(item[prop])) {
+                            if (String(cmp) !== String(this._prop(item, prop))) {
                                 continue;
                             }
                             values[vi] = item;
@@ -2951,7 +2951,7 @@ class Flexdatalist {
                 if (vp === o.iconProperty) {
                     el = document.createElement('img');
                     el.className = 'prop-' + vp;
-                    el.src = item[vp];
+                    el.src = this._prop(item, vp);
                 } else {
                     el = document.createElement('span');
                     el.className = 'prop-' + vp;
@@ -3280,7 +3280,9 @@ class Flexdatalist {
      * @returns {string} HTML-safe string.
      */
     _hlProp(item, property, fallback = '') {
-        const hl = this._prop(item, property + '_highlight');
+        // The search stores the highlight under the flat key `<property>_highlight`,
+        // also for a dotted path such as `user.city.name`.
+        const hl = item?.[property + '_highlight'] ?? this._prop(item, property + '_highlight');
         if (hl !== undefined) {
             return hl;
         }

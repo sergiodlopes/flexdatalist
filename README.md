@@ -107,6 +107,19 @@ const [fd] = await Flexdatalist.init('#people', {
 
 All options can be set via the constructor, via `data-*` attributes (camelCase becomes kebab-case), or at runtime with `setOption()` (except `multiple`, `classPrefix` and `resultsContainer`, which need a new instance).
 
+**Nested properties.** Every option that names an item property (`searchIn`, `textProperty`, `valueProperty`, `visibleProperties`, `iconProperty`, `groupBy`, `resultsProperty` and `{placeholder}` patterns) also takes a dotted path into nested objects:
+
+```js
+// { name: 'Ana', office: { city: { name: 'Lisboa' } }, employee: { number: 'E-101' } }
+Flexdatalist.init('#people', {
+    data: people,
+    searchIn: ['name', 'office.city.name'],
+    visibleProperties: ['name', 'office.city.name'],
+    valueProperty: 'employee.number',
+    textProperty: '{name} ({office.city.name})',
+});
+```
+
 ### Data Source
 
 | Option | Type | Default | Description |

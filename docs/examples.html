@@ -723,6 +723,29 @@ cache: false</div>
                 <p class="text-xs text-gray-500 mt-2">The input starts with <code class="bg-gray-100 px-1 rounded">value="PT"</code>. Flexdatalist asks the server with an empty keyword (and <code class="bg-gray-100 px-1 rounded">selected=PT</code>) and shows the matching item's text.</p>
                 <div class="code-block mt-3">value="PT" data-value-property="iso2"</div>
             </div>
+
+            <!-- 5h nested properties (dotted paths) -->
+            <div class="bg-white border rounded-xl p-5 md:col-span-2">
+                <h3 class="font-semibold mb-3">Nested properties — dotted paths</h3>
+                <input id="vp-nested" type="text" class="fdl-input"
+                    value="E-104"
+                    placeholder="Search people or office city (try 'lis')…" name="vp_nested">
+                <p class="text-xs text-gray-400 mt-2">Stored: <span class="val-badge" data-val="vp_nested">—</span></p>
+                <p class="text-xs text-gray-500 mt-2">Every option that names a property also accepts a dotted path into nested objects. Here the value, the search, the avatar and the groups all come from nested data, and the pre-selected <code class="bg-gray-100 px-1 rounded">value="E-104"</code> is resolved through <code class="bg-gray-100 px-1 rounded">employee.number</code>.</p>
+                <div class="code-block mt-3">// { name: 'David Almeida',
+//   office:   { city: { name: 'Lisboa' }, country: { name: 'Portugal' } },
+//   employee: { number: 'E-104' },
+//   profile:  { avatar: { url: '…' } } }
+Flexdatalist.init('#vp-nested', {
+    data: PEOPLE,
+    searchIn: ['name', 'office.city.name'],
+    visibleProperties: ['profile.avatar.url', 'name', 'office.city.name'],
+    iconProperty: 'profile.avatar.url',
+    groupBy: 'office.country.name',
+    valueProperty: 'employee.number',
+    textProperty: 'name',
+});</div>
+            </div>
         </div>
     </section>
 
@@ -1403,6 +1426,19 @@ Flexdatalist.init('#multi-collapse', {
 // ──────────────────────────────────────────────────
 // Section 5 — valueProperty (fruit id)
 // ──────────────────────────────────────────────────
+Flexdatalist.init('#vp-nested', {
+    data: PEOPLE,
+    searchIn: ['name', 'office.city.name'],
+    visibleProperties: ['profile.avatar.url', 'name', 'office.city.name'],
+    iconProperty: 'profile.avatar.url',
+    groupBy: 'office.country.name',
+    valueProperty: 'employee.number',
+    textProperty: 'name',
+    selectionRequired: true,
+    searchContain: true,
+    minLength: 1,
+});
+
 Flexdatalist.init('#vp-fruit-id', {
     data: FRUITS,
     searchIn: ['label'],

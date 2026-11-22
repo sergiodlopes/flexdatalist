@@ -407,6 +407,22 @@ await test('5 valueProperty', 'pre-selected value resolved by the server', async
     expectEqual(await valueOf('vp_preselected'), 'PT', 'value');
     expectEqual(await aliasText('vp_preselected'), 'Portugal', 'text');
 });
+await test('5 valueProperty', 'nested properties (dotted paths)', async () => {
+    expectEqual(await valueOf('vp_nested'), 'E-104', 'initial value');
+    expectEqual(await aliasText('vp_nested'), 'David Almeida', 'initial text');
+    await (await alias('vp_nested')).fill('');
+    await type('vp_nested', 'lyo');
+    await waitForResults();
+    const groupNames = (await page.locator('.flexdatalist-results li.group .group-name').allTextContents()).join('|');
+    expectEqual(groupNames, 'France', 'group from office.country.name');
+    const firstItem = resultItems().first();
+    expect((await firstItem.innerText()).includes('Inês Carvalho'), 'found through office.city.name');
+    expectEqual(await firstItem.locator('.highlight').first().innerText(), 'Lyo', 'highlight in the nested city');
+    const imageSource = await firstItem.locator('img').getAttribute('src');
+    expect(imageSource?.startsWith('data:image/svg'), `img src: ${imageSource}`);
+    await firstItem.click();
+    expectEqual(await valueOf('vp_nested'), 'E-109', 'value');
+});
 
 // --- 6. textProperty ---
 await test('6 textProperty', 'name', async () => {

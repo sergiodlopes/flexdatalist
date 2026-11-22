@@ -143,6 +143,77 @@ describe('search', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Nested properties (dotted paths)
+// ---------------------------------------------------------------------------
+
+describe('nested properties', () => {
+    const PLACES = [
+        { name: 'Lisboa', meta: { code: 'LIS', photo: { url: '/lis.jpg' } }, region: { country: { name: 'Portugal' } } },
+        { name: 'Paris', meta: { code: 'PAR', photo: { url: '/par.jpg' } }, region: { country: { name: 'France' } } },
+    ];
+
+    it('loads an initial value through a dotted valueProperty', async () => {
+        document.body.innerHTML = '<input id="t" value="PAR">';
+        const fd = make('#t', { data: PLACES, searchIn: ['name'], valueProperty: 'meta.code' });
+        await fd.ready;
+        expect(fd._alias.value).toBe('Paris');
+        expect(fd.getValue()).toBe('PAR');
+    });
+
+    it('resolves setValue() through a dotted valueProperty', async () => {
+        document.body.innerHTML = '<input id="t">';
+        const fd = make('#t', { data: PLACES, searchIn: ['name'], valueProperty: 'meta.code' });
+        await fd.ready;
+        fd.setValue('LIS');
+        await wait(10);
+        expect(fd._alias.value).toBe('Lisboa');
+        expect(fd.getValue()).toBe('LIS');
+    });
+
+    it('highlights matches in a dotted searchIn property', () => {
+        document.body.innerHTML = '<input id="t">';
+        const fd = make('#t', {
+            data: PLACES, searchIn: ['region.country.name'], textProperty: 'name',
+            visibleProperties: ['name', 'region.country.name'], minLength: 1,
+        });
+        fd.search('Port');
+        const item = document.querySelector('.flexdatalist-results li.item');
+        expect(item.textContent).toContain('Lisboa');
+        expect(item.querySelector('.highlight')?.textContent).toBe('Port');
+    });
+
+    it('shows the image of a dotted iconProperty', () => {
+        document.body.innerHTML = '<input id="t">';
+        const fd = make('#t', {
+            data: PLACES, searchIn: ['name'], iconProperty: 'meta.photo.url',
+            visibleProperties: ['meta.photo.url', 'name'], minLength: 1,
+        });
+        fd.search('Lis');
+        const image = document.querySelector('.flexdatalist-results li.item img');
+        expect(image.getAttribute('src')).toBe('/lis.jpg');
+    });
+
+    it('fills {placeholder} patterns from dotted paths', async () => {
+        document.body.innerHTML = '<input id="t" value="LIS">';
+        const fd = make('#t', {
+            data: PLACES, searchIn: ['name'], valueProperty: 'meta.code',
+            textProperty: '{name} ({region.country.name})',
+        });
+        await fd.ready;
+        expect(fd._alias.value).toBe('Lisboa (Portugal)');
+    });
+
+    it('groups and labels by a dotted groupBy', () => {
+        document.body.innerHTML = '<input id="t">';
+        const fd = make('#t', { data: PLACES, searchIn: ['name'], groupBy: 'region.country.name', searchContain: true, minLength: 1 });
+        fd.search('a');
+        const headers = [...document.querySelectorAll('.flexdatalist-results li.group')].map(li => li.textContent.trim());
+        expect(headers.join(' ')).toContain('Portugal');
+        expect(headers.join(' ')).toContain('France');
+    });
+});
+
+// ---------------------------------------------------------------------------
 // Values
 // ---------------------------------------------------------------------------
 

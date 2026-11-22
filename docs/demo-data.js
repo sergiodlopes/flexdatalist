@@ -31,18 +31,32 @@ function makeAvatar(name, backgroundColor) {
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 
+/**
+ * People with flat fields (name, email, team, thumb) and nested objects
+ * (office.city.name, office.country.name, employee.number, profile.avatar.url).
+ */
 const PEOPLE = [
-    { id: 101, name: 'Ana Ribeiro',     email: 'ana.ribeiro@example.com',     team: 'Design',      color: '#db2777' },
-    { id: 102, name: 'Bruno Costa',     email: 'bruno.costa@example.com',     team: 'Engineering', color: '#2563eb' },
-    { id: 103, name: 'Carla Mendes',    email: 'carla.mendes@example.com',    team: 'Engineering', color: '#059669' },
-    { id: 104, name: 'David Almeida',   email: 'david.almeida@example.com',   team: 'Sales',       color: '#d97706' },
-    { id: 105, name: 'Eva Martins',     email: 'eva.martins@example.com',     team: 'Design',      color: '#7c3aed' },
-    { id: 106, name: 'Filipe Sousa',    email: 'filipe.sousa@example.com',    team: 'Support',     color: '#0891b2' },
-    { id: 107, name: 'Gabriela Lopes',  email: 'gabriela.lopes@example.com',  team: 'Sales',       color: '#dc2626' },
-    { id: 108, name: 'Hugo Pereira',    email: 'hugo.pereira@example.com',    team: 'Engineering', color: '#4f46e5' },
-    { id: 109, name: 'Inês Carvalho',   email: 'ines.carvalho@example.com',   team: 'Support',     color: '#65a30d' },
-    { id: 110, name: 'João Fernandes',  email: 'joao.fernandes@example.com',  team: 'Engineering', color: '#0d9488' },
-].map(person => ({ ...person, thumb: makeAvatar(person.name, person.color) }));
+    { id: 101, name: 'Ana Ribeiro',     email: 'ana.ribeiro@example.com',     team: 'Design',      color: '#db2777', office: { city: { name: 'Lisboa' },    country: { name: 'Portugal' } } },
+    { id: 102, name: 'Bruno Costa',     email: 'bruno.costa@example.com',     team: 'Engineering', color: '#2563eb', office: { city: { name: 'Porto' },     country: { name: 'Portugal' } } },
+    { id: 103, name: 'Carla Mendes',    email: 'carla.mendes@example.com',    team: 'Engineering', color: '#059669', office: { city: { name: 'Madrid' },    country: { name: 'Spain' } } },
+    { id: 104, name: 'David Almeida',   email: 'david.almeida@example.com',   team: 'Sales',       color: '#d97706', office: { city: { name: 'Lisboa' },    country: { name: 'Portugal' } } },
+    { id: 105, name: 'Eva Martins',     email: 'eva.martins@example.com',     team: 'Design',      color: '#7c3aed', office: { city: { name: 'Barcelona' }, country: { name: 'Spain' } } },
+    { id: 106, name: 'Filipe Sousa',    email: 'filipe.sousa@example.com',    team: 'Support',     color: '#0891b2', office: { city: { name: 'Porto' },     country: { name: 'Portugal' } } },
+    { id: 107, name: 'Gabriela Lopes',  email: 'gabriela.lopes@example.com',  team: 'Sales',       color: '#dc2626', office: { city: { name: 'Paris' },     country: { name: 'France' } } },
+    { id: 108, name: 'Hugo Pereira',    email: 'hugo.pereira@example.com',    team: 'Engineering', color: '#4f46e5', office: { city: { name: 'Madrid' },    country: { name: 'Spain' } } },
+    { id: 109, name: 'Inês Carvalho',   email: 'ines.carvalho@example.com',   team: 'Support',     color: '#65a30d', office: { city: { name: 'Lyon' },      country: { name: 'France' } } },
+    { id: 110, name: 'João Fernandes',  email: 'joao.fernandes@example.com',  team: 'Engineering', color: '#0d9488', office: { city: { name: 'Lisboa' },    country: { name: 'Portugal' } } },
+].map(person => {
+    const thumb = makeAvatar(person.name, person.color);
+    return {
+        ...person,
+        thumb,
+        // Nested copies for the "nested properties" demo (dotted paths such
+        // as 'office.city.name' or 'profile.avatar.url').
+        employee: { number: 'E-' + person.id },
+        profile: { avatar: { url: thumb } },
+    };
+});
 
 /** Mixed records for grouped results ("People", "Tasks", "Pages"). */
 const WORKSPACE_ITEMS = [

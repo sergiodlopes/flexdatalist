@@ -86,6 +86,8 @@ The response may also include an `options` object; its keys are merged into the 
 
 ## Options (defaults)
 
+Options that name an item property (`searchIn`, `textProperty`, `valueProperty`, `visibleProperties`, `iconProperty`, `groupBy`, `resultsProperty`, `{placeholder}` patterns) accept dotted paths into nested objects, e.g. `valueProperty: 'employee.number'`, `searchIn: ['name', 'office.city.name']`, `textProperty: '{name} ({office.city.name})'`.
+
 Data: `url` (null), `data` ([], array or URL of a JSON file), `params` ({}), `relatives` (null, CSS selector), `chainedRelatives` (false, disable while all relatives are empty), `resultsProperty` ('results').
 Search: `minLength` (3), `searchIn` (['label']), `searchContain` (false), `searchEqual` (false), `searchByWord` (false), `searchDisabled` (false), `searchDelay` (300 ms), `normalizeString` (null, `(string) => string`; accents are already stripped by default).
 Display: `textProperty` (null; property or `'{name} ({country})'` pattern), `valueProperty` (null; property, list of properties, or `'*'` = whole item as JSON), `visibleProperties` (defaults to `searchIn`; supports `{placeholder}` patterns), `iconProperty` ('thumb'), `groupBy` (false), `groupView` ('headers' | 'tabs'), `groupTabAnimation` (true), `maxShownResults` (100, 0 = unlimited), `focusFirstResult` (false), `noResultsText`, `resultsLoader` (null, spinner image URL), `resultsContainer` (null; element or selector to render results into instead of a dropdown), `classPrefix` ('', e.g. 'fd3-' to coexist with v2 CSS).
