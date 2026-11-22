@@ -200,6 +200,22 @@ class Flexdatalist {
     /** @type {boolean} Whether global document listeners have been attached. */
     static #globalBound = false;
 
+    /**
+     * Auto-init on page load (same behaviour as the jQuery plugin): every
+     * `input.flexdatalist` without `.autodiscover-disabled` is initialised on
+     * DOMContentLoaded. Registered when the class is defined — it used to be
+     * registered only when a first instance was created, so a page relying on
+     * auto-init alone never initialised anything. Skipped outside a browser
+     * (SSR) and when the page has already finished loading.
+     */
+    static {
+        if (typeof document !== 'undefined' && document.readyState !== 'complete') {
+            document.addEventListener('DOMContentLoaded', () => {
+                Flexdatalist.init('input.flexdatalist:not(.flexdatalist-set):not(.autodiscover-disabled)');
+            }, { once: true });
+        }
+    }
+
     // =========================================================================
     // Static API
     // =========================================================================
@@ -1176,11 +1192,6 @@ class Flexdatalist {
                     fd.setValue(el.value);
                 }
             }
-        });
-
-        // Auto-init on page load (same behaviour as the jQuery plugin).
-        document.addEventListener('DOMContentLoaded', () => {
-            Flexdatalist.init('input.flexdatalist:not(.flexdatalist-set):not(.autodiscover-disabled)');
         });
     }
 
