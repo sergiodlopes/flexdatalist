@@ -305,8 +305,17 @@ class Flexdatalist {
         /** @type {number|null} setTimeout handle for debounced search. */
         this._searchTimeout = null;
 
-        /** @type {number|null} setInterval handle for leave detection. */
-        this._leaveInterval = null;
+        /** @type {number|null} setTimeout handle for the deferred leave check. */
+        this._leaveTimeout = null;
+
+        /**
+         * Document-level focusout listener (capture) that detects focus leaving
+         * the widget (alias, tags wrapper or results). Kept for destroy().
+         * @type {Function}
+         */
+        this._onDocumentFocusOut = e => {
+            if (this._ownsElement(e.target)) this._scheduleLeaveCheck();
+        };
 
         /** @type {boolean} Whether this instance has a fetch in flight. */
         this._requestInFlight = false;
@@ -404,6 +413,7 @@ class Flexdatalist {
         this._bindAlias();
 
         window.addEventListener('resize', this._onResize);
+        document.addEventListener('focusout', this._onDocumentFocusOut, true);
         this._cacheGC();
 
         // Save the initial value before selectionRequired's _clearValue wipes it.
@@ -804,9 +814,10 @@ class Flexdatalist {
         // instance alive or runs against removed DOM after destruction.
         this._destroyed = true;
         clearTimeout(this._searchTimeout);
-        clearInterval(this._leaveInterval);
+        clearTimeout(this._leaveTimeout);
         this._searchTimeout = null;
-        this._leaveInterval = null;
+        this._leaveTimeout = null;
+        document.removeEventListener('focusout', this._onDocumentFocusOut, true);
         this._pendingRequest = null;
         window.removeEventListener('resize', this._onResize);
         if (this._onRelativeChange) {
@@ -996,7 +1007,6 @@ class Flexdatalist {
             // click-to-show-all works again when the user comes back.
             this._fetchDisabled = false;
             this._multipleEl?.classList.add(this._classes.multipleFocus);
-            this._actAddValueOnLeave();
         });
 
         alias.addEventListener('focusout', () => {
@@ -1297,29 +1307,43 @@ class Flexdatalist {
     }
 
     /**
-     * Start a recurring interval that commits a pending free-text value when
-     * focus leaves the widget (multiple + !selectionRequired only).
+     * Whether `node` is part of this widget: the alias, the tags wrapper or
+     * the results container.
+     *
+     * @private
+     * @param {Node|null} node
+     * @returns {boolean}
+     */
+    _ownsElement(node) {
+        if (!node) return false;
+        return node === this._alias
+            || !!this._multipleEl?.contains(node)
+            || !!this._resultsEl?.contains(node);
+    }
+
+    /**
+     * After focus left one of this widget's elements, check (once focus has
+     * settled) whether it left the widget altogether; if so, commit the
+     * pending free text as a tag (multiple + !selectionRequired only).
+     *
+     * Replaces the former 800 ms polling, which compared element ids and so
+     * never fired for inputs without an id (`'' === ''` for the body).
      *
      * @private
      */
-    _actAddValueOnLeave() {
-        const o = this._options;
-        if (this._leaveInterval || o.selectionRequired || !o.multiple) return;
-        const parentId = this._hiddenInput.id;
-
-        this._leaveInterval = setInterval(() => {
-            const activeId = (document.activeElement?.id ?? '').replace('-flexdatalist', '');
-            if (parentId === activeId || this._itemSelected || this._resultsEl?.contains(document.activeElement)) return;
+    _scheduleLeaveCheck() {
+        clearTimeout(this._leaveTimeout);
+        this._leaveTimeout = setTimeout(() => {
+            this._leaveTimeout = null;
+            if (this._destroyed || this._itemSelected || this._ownsElement(document.activeElement)) return;
 
             this._fetchDisabled = true;
-            if (this._alias.value.length > 0) {
+            const o = this._options;
+            if (o.multiple && !o.selectionRequired && this._alias.value.length > 0) {
                 this._extractValue(this._alias.value);
                 this._resultsRemove();
             }
-
-            clearInterval(this._leaveInterval);
-            this._leaveInterval = null;
-        }, 800);
+        }, 0);
     }
 
     /**
@@ -1992,7 +2016,9 @@ class Flexdatalist {
      *                             (used during initialisation to pre-populate).
      */
     _dataLoad(callback, load) {
-        if (this._fetchDisabled) return;
+        // _fetchDisabled stops searches after focus left the widget; value
+        // loads (setValue/addValue, which pass `load`) must still run.
+        if (this._fetchDisabled && load === undefined) return;
         this._dispatch('before:flexdatalist.data');
 
         let data = [];
