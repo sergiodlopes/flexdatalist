@@ -258,7 +258,7 @@
                                 <p class="code-caption">Script tag</p>
 <pre><code data-lang="html">&lt;!-- CSS --&gt;
 &lt;link rel="stylesheet"
-      href="/path/to/jquery.flexdatalist.css"&gt;
+      href="/path/to/flexdatalist.css"&gt;
 
 &lt;!-- JS (no jQuery needed) --&gt;
 &lt;script src="/path/to/flexdatalist.js"&gt;&lt;/script&gt;</code></pre>
@@ -333,7 +333,7 @@ await fd2.ready; // resolves once initial data is loaded</code></pre>
                 </div>
                 <div class="callout callout-info">
                     <svg class="callout-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1-.3-.3-.4-.6-.4-1 0-.8.7-1.4 1.5-1.4H16a5 5 0 0 0 5-5c0-4.4-4-8-9-8z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>
-                    <p><strong>CSS compatibility:</strong> The new standalone class uses the <strong>exact same CSS class names</strong> as the original jQuery plugin, so <code>jquery.flexdatalist.css</code> works without modification.</p>
+                    <p><strong>CSS compatibility:</strong> The new standalone class uses the <strong>exact same CSS class names</strong> as the original jQuery plugin, so CSS overrides written for v2 keep working on top of <code>flexdatalist.css</code>.</p>
                 </div>
             </div>
         </section>
@@ -899,7 +899,7 @@ function CityPicker({ onChange }) {
 
             <h3 class="sub-heading" id="what-changed" data-rail="What changed">What changed <a class="anchor" href="#what-changed" aria-label="Link to What changed">#</a></h3>
             <ul class="checklist">
-                <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><p><strong>CSS:</strong> No changes, same class names. Keep using <code>jquery.flexdatalist.css</code>. Running v2 and v3 side by side? Set <a href="#opt-classPrefix"><code>classPrefix</code></a>, e.g. <code>'fd3-'</code>.</p></li>
+                <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><p><strong>CSS:</strong> Same class names, so your overrides keep working. Swap <code>jquery.flexdatalist.css</code> for <code>flexdatalist.css</code> to get the v3 look and the <code>--fdl-*</code> theme variables. Running v2 and v3 side by side? Set <a href="#opt-classPrefix"><code>classPrefix</code></a>, e.g. <code>'fd3-'</code>.</p></li>
                 <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><p><strong>HTML <code>data-*</code> attributes:</strong> Unchanged — all options work the same way.</p></li>
                 <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><p><strong>Events:</strong> Same event names. Payload moved from jQuery extra args to <code>e.detail</code> (CustomEvent).</p></li>
                 <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><p><strong>Alias input:</strong> No longer given a <code>name</code> attribute — never double-submitted.</p></li>
