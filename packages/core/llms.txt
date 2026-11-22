@@ -121,11 +121,34 @@ Instance (setters return `this` and can be chained): `ready` (Promise), `getValu
 
 CSS custom properties: `--fdl-accent`, `--fdl-accent-fg`, `--fdl-accent-light`, `--fdl-tag-bg`, `--fdl-tag-border`, `--fdl-tag-fg`, `--fdl-radius`, `--fdl-font-size`, `--fdl-shadow`.
 
-## Framework adapters (thin wrappers around the same core)
+## React, Vue, Svelte
 
-- Vue 3: `flexdatalist-vue` (`v-model`, events as `@select`, `@change`...)
-- React: `flexdatalist-react` (`onSelect`, `onChange`... props; methods through `ref`)
-- Svelte: `flexdatalist-svelte` (`bind:value`, `on:select`...)
+Do NOT install `flexdatalist-react`, `flexdatalist-vue` or `flexdatalist-svelte`: they are deprecated. Write a small component around the core instead:
+
+1. Render the `<input>` inside a wrapper element that only this component uses (Flexdatalist adds its own elements next to the input).
+2. On mount: set `input.value` to the initial value, add listeners, then create the instance with `new Flexdatalist(input, options)`. Add listeners before construction, because the constructor can fire `init`/`change` events. Construct synchronously, not with `await init()`, so cleanup always has an instance to destroy.
+3. Report changes from `change:flexdatalist`. `event.detail.value` is always a string (comma-separated in multiple mode, JSON with `valueProperty: '*'`).
+4. On unmount: remove the listeners and call `instance.destroy()`.
+
+```jsx
+// React
+function CityPicker({ name, defaultValue = '', onChange }) {
+    const inputRef = useRef(null);
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
+    useEffect(() => {
+        const input = inputRef.current;
+        input.value = defaultValue;
+        const handleChange = (event) => onChangeRef.current?.(event.detail.value);
+        input.addEventListener('change:flexdatalist', handleChange);
+        const instance = new Flexdatalist(input, { url: '/api/cities', minLength: 2, searchIn: ['name'], valueProperty: 'id' });
+        return () => { input.removeEventListener('change:flexdatalist', handleChange); instance.destroy(); };
+    }, []);
+    return <div><input ref={inputRef} type="text" name={name} /></div>;
+}
+```
+
+Vue (`onMounted` / `onBeforeUnmount`, emit `update:modelValue`) and Svelte (`onMount` returning the cleanup, assign to the exported `value`) follow the same steps; full versions are in the README. To change the value from outside after mount, call `instance.setValue(value)`, and skip the call when the value is already the input's current value.
 
 ## Links
 

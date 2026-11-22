@@ -119,13 +119,11 @@ See the [source documentation](src/flexdatalist.js) for the full event list.
 
 [`llms.txt`](llms.txt) is a compact reference written for LLMs and coding agents. It covers the server response format, every option, and the most common integration mistakes. It is included in the npm package (`node_modules/flexdatalist/llms.txt`).
 
-## Framework Adapters
+## React, Vue, Svelte
 
-| Framework | Package | Install |
-|-----------|---------|---------|
-| Vue 3 | [flexdatalist-vue](../vue/) | `npm install flexdatalist-vue` |
-| React | [flexdatalist-react](../react/) | `npm install flexdatalist-react` |
-| Svelte | [flexdatalist-svelte](../svelte/) | `npm install flexdatalist-svelte` |
+Use this package directly from a small component. Copy-paste versions for each framework are in the [main README](https://github.com/sergiodlopes/flexdatalist#using-with-react-vue-or-svelte).
+
+The `flexdatalist-vue`, `flexdatalist-react` and `flexdatalist-svelte` packages are deprecated.
 
 ## License
 

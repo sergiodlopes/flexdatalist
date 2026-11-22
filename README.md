@@ -32,15 +32,11 @@ No build step needed -- just drop in the files:
 <script src="flexdatalist.js"></script>
 ```
 
-### Framework adapters
+### React, Vue, Svelte
 
-| Framework | Package | Install |
-|-----------|---------|---------|
-| Vue 3 | [`flexdatalist-vue`](packages/vue/) | `npm install flexdatalist flexdatalist-vue` |
-| React 18/19 | [`flexdatalist-react`](packages/react/) | `npm install flexdatalist flexdatalist-react` |
-| Svelte 4/5 | [`flexdatalist-svelte`](packages/svelte/) | `npm install flexdatalist flexdatalist-svelte` |
+Use the core package directly. See [Using with React, Vue or Svelte](#using-with-react-vue-or-svelte) for short, copy-paste components.
 
-Each adapter is a thin wrapper (~5 kB) that provides native component APIs (props, events, refs) while the core does all the heavy lifting. See each package's README for usage examples.
+> The `flexdatalist-vue`, `flexdatalist-react` and `flexdatalist-svelte` packages are **deprecated** and no longer maintained. Existing installs keep working.
 
 ## Quick Start
 
@@ -287,70 +283,148 @@ Override CSS custom properties on any ancestor to theme the widget:
 
 CSS class names are backwards-compatible -- swap the stylesheet and it works.
 
-## Framework Usage
+## Using with React, Vue or Svelte
+
+There's no adapter package: a component that owns one `<input>` is enough. Every framework follows the same four steps:
+
+1. Render an `<input>` inside a wrapper element that only this component uses. Flexdatalist adds its own elements next to the input, and the wrapper keeps them out of the framework's way.
+2. On mount, set the initial value, add your listeners, then create the instance with `new Flexdatalist(input, options)`. Add the listeners first, because the constructor can already fire `init`/`change` events. Create the instance synchronously, so that unmounting early can still destroy it.
+3. Read changes from `change:flexdatalist`. `event.detail.value` is always the string the form submits: comma-separated in `multiple` mode, JSON with `valueProperty: '*'`. It also fires while the initial value loads, and `setValue()` reports `''` (the clear) before the new value, so handlers should be idempotent.
+4. On unmount, call `instance.destroy()`.
+
+The components below are uncontrolled: the value goes in once and comes out through the change callback. To change the value from outside later, keep the instance and call `instance.setValue(value)`. Skip that call when the value is already the one the input holds, otherwise you get a needless clear/change cycle.
+
+### React
+
+```jsx
+import { useEffect, useRef } from 'react';
+import Flexdatalist from 'flexdatalist';
+import 'flexdatalist/css';
+
+export function CityPicker({ name, defaultValue = '', onChange }) {
+    const inputRef = useRef(null);
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
+
+    useEffect(() => {
+        const input = inputRef.current;
+        input.value = defaultValue;
+
+        const handleChange = (event) => onChangeRef.current?.(event.detail.value);
+        input.addEventListener('change:flexdatalist', handleChange);
+
+        const instance = new Flexdatalist(input, {
+            url: '/api/cities',
+            minLength: 2,
+            searchIn: ['name'],
+            valueProperty: 'id',
+        });
+
+        return () => {
+            input.removeEventListener('change:flexdatalist', handleChange);
+            instance.destroy();
+        };
+    }, []);
+
+    return (
+        <div>
+            <input ref={inputRef} type="text" name={name} />
+        </div>
+    );
+}
+```
+
+The empty dependency array means the options are read once. To apply new options, give the component a `key` that changes with them so React recreates it. StrictMode's mount/unmount/mount works, because each mount creates its own instance and destroys it.
 
 ### Vue 3
 
 ```vue
 <script setup>
-import { ref } from 'vue';
-import { Flexdatalist } from 'flexdatalist-vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import Flexdatalist from 'flexdatalist';
 import 'flexdatalist/css';
 
-const city = ref('');
+const props = defineProps({
+    modelValue: { type: String, default: '' },
+    name: { type: String, default: null },
+});
+const emit = defineEmits(['update:modelValue']);
+
+const inputRef = ref(null);
+let instance = null;
+
+function handleChange(event) {
+    emit('update:modelValue', event.detail.value);
+}
+
+onMounted(() => {
+    const input = inputRef.value;
+    input.value = props.modelValue;
+    input.addEventListener('change:flexdatalist', handleChange);
+
+    instance = new Flexdatalist(input, {
+        url: '/api/cities',
+        minLength: 2,
+        searchIn: ['name'],
+        valueProperty: 'id',
+    });
+});
+
+onBeforeUnmount(() => {
+    inputRef.value?.removeEventListener('change:flexdatalist', handleChange);
+    instance?.destroy();
+    instance = null;
+});
 </script>
 
 <template>
-    <Flexdatalist
-        v-model="city"
-        url="/api/cities"
-        :min-length="2"
-        placeholder="Search for a city..."
-        @select="(item) => console.log('Selected:', item)"
-    />
+    <div>
+        <input ref="inputRef" type="text" :name="name" />
+    </div>
 </template>
 ```
 
-### React
-
-```jsx
-import { useRef } from 'react';
-import { Flexdatalist } from 'flexdatalist-react';
-import 'flexdatalist/css';
-
-function CityPicker() {
-    const ref = useRef(null);
-
-    return (
-        <Flexdatalist
-            ref={ref}
-            url="/api/cities"
-            minLength={2}
-            placeholder="Search for a city..."
-            onSelect={(item) => console.log('Selected:', item)}
-        />
-    );
-}
-```
+Use it with `<CityPicker v-model="cityId" name="city_id" />`. Here `v-model` carries changes out of the component. The initial value is read once, on mount.
 
 ### Svelte
 
 ```svelte
 <script>
-    import { Flexdatalist } from 'flexdatalist-svelte';
+    import { onMount } from 'svelte';
+    import Flexdatalist from 'flexdatalist';
     import 'flexdatalist/css';
 
-    let city = '';
+    export let value = '';
+    export let name = null;
+
+    let inputElement;
+
+    onMount(() => {
+        inputElement.value = value;
+
+        const handleChange = (event) => { value = event.detail.value; };
+        inputElement.addEventListener('change:flexdatalist', handleChange);
+
+        const instance = new Flexdatalist(inputElement, {
+            url: '/api/cities',
+            minLength: 2,
+            searchIn: ['name'],
+            valueProperty: 'id',
+        });
+
+        return () => {
+            inputElement.removeEventListener('change:flexdatalist', handleChange);
+            instance.destroy();
+        };
+    });
 </script>
 
-<Flexdatalist
-    bind:value={city}
-    url="/api/cities"
-    minLength={2}
-    placeholder="Search for a city..."
-    on:select={(e) => console.log('Selected:', e.detail)}
-/>
+<div>
+    <input bind:this={inputElement} type="text" {name} />
+</div>
 ```
+
+Use it with `<CityPicker bind:value={cityId} name="city_id" />`. This works in Svelte 4 and in Svelte 5 (legacy component syntax).
 
 ## Demo & Documentation
 

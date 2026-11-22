@@ -1,5 +1,7 @@
 # flexdatalist-svelte
 
+> **Deprecated.** This package is no longer maintained. Use [`flexdatalist`](https://www.npmjs.com/package/flexdatalist) directly from a small component: see [Using with React, Vue or Svelte](https://github.com/sergiodlopes/flexdatalist#using-with-react-vue-or-svelte). Existing installs keep working.
+
 Svelte adapter for the [Flexdatalist](https://github.com/sergiodlopes/flexdatalist) autocomplete / tag input.
 
 ## Install
