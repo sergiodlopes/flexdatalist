@@ -2276,14 +2276,16 @@ class Flexdatalist {
     }
 
     /**
-     * Replace sentinel tokens with `<span class="highlight">…</span>`.
+     * Escape `str` for HTML, then replace sentinel tokens with
+     * `<span class="highlight">…</span>`. The sentinels contain no HTML
+     * special characters, so they survive escaping untouched.
      *
      * @private
-     * @param {string} str  Text containing sentinel tokens.
-     * @returns {string} HTML string with highlight spans.
+     * @param {string} str  Raw text containing sentinel tokens.
+     * @returns {string} Safe HTML string with highlight spans.
      */
     _hlWrap(str) {
-        return str.split('|:|').join('<span class="highlight">').split('|::|').join('</span>');
+        return this._escape(str).split('|:|').join('<span class="highlight">').split('|::|').join('</span>');
     }
 
     /**
@@ -2509,7 +2511,8 @@ class Flexdatalist {
         for (const vp of o.visibleProperties) {
             let el;
             if (vp.includes('{')) {
-                const str = this._replacePlaceholders(item, vp, '');
+                // The pattern is developer-provided markup; only the item values are escaped.
+                const str = this._replacePlaceholders(item, vp, '', true);
                 const parsed = this._parsePlaceholders(vp);
                 el = document.createElement('span');
                 el.className = 'prop-' + (Object.values(parsed ?? {}).join('-') || vp);
@@ -2748,7 +2751,7 @@ class Flexdatalist {
 
         groupNames.forEach((groupName, idx) => {
             const items = grouped[groupName] ?? [];
-            const groupText = items.length ? this._hlProp(items[0], groupBy, groupName) : String(groupName);
+            const groupText = items.length ? this._hlProp(items[0], groupBy, groupName) : this._escape(groupName);
 
             const tabId = `${baseId}-tab-${idx}`;
             const panelId = `${baseId}-panel-${idx}`;
@@ -2822,21 +2825,21 @@ class Flexdatalist {
     }
 
     /**
-     * Return the highlighted value of `property` for `item`, falling back to
-     * the raw property value or `fallback`.
+     * Return the highlighted value of `property` for `item` as safe HTML,
+     * falling back to the escaped raw property value or `fallback`.
      *
      * @private
      * @param {Object} item
      * @param {string} property
      * @param {string} [fallback='']
-     * @returns {string}
+     * @returns {string} HTML-safe string.
      */
     _hlProp(item, property, fallback = '') {
         const hl = this._prop(item, property + '_highlight');
         if (hl !== undefined) {
             return hl;
         }
-        return String(this._prop(item, property) ?? fallback);
+        return this._escape(this._prop(item, property) ?? fallback);
     }
 
     /**
@@ -3192,9 +3195,10 @@ class Flexdatalist {
      * @param {Object} item      Data source object.
      * @param {string} pattern   Pattern string, e.g. `'{name} ({city})'`.
      * @param {*}      fallback  Returned when pattern is empty or no match.
+     * @param {boolean} [escapeValues=false] HTML-escape the substituted values.
      * @returns {string|*}
      */
-    _replacePlaceholders(item, pattern, fallback) {
+    _replacePlaceholders(item, pattern, fallback, escapeValues = false) {
         if (!this._isObj(item) || typeof pattern !== 'string') {
             return fallback;
         }
@@ -3205,7 +3209,9 @@ class Flexdatalist {
         for (const [token, key] of Object.entries(props)) {
             const v = this._prop(item, key);
             if (v !== undefined) {
-                pattern = pattern.replace(token, v);
+                // Function replacer: `$&`, `$1`… inside values must stay literal.
+                const replacement = escapeValues ? this._escape(v) : String(v);
+                pattern = pattern.replace(token, () => replacement);
             }
         }
         return pattern;
