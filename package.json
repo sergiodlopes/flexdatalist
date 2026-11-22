@@ -6,11 +6,15 @@
     "build:vue": "pnpm --filter flexdatalist-vue build",
     "build:react": "pnpm --filter flexdatalist-react build",
     "build:svelte": "pnpm --filter flexdatalist-svelte build",
-    "test": "pnpm --filter flexdatalist test"
+    "test": "pnpm --filter flexdatalist test",
+    "test:demos": "node tests/demos.test.mjs"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
     ]
+  },
+  "devDependencies": {
+    "playwright": "1.49.1"
   }
 }
