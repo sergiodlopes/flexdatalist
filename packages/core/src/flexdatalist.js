@@ -1857,8 +1857,10 @@ class Flexdatalist {
      * @param {boolean} [init]       Suppress events.
      */
     _clearValue(clearAlias, init) {
-        const prev = this._value;
         const o = this._options;
+        // Something to clear: a value, or tags (toggled-off tags leave the
+        // value empty but are still on screen).
+        const hadContent = String(this._value ?? '') !== '' || this._texts.length > 0;
 
         if (o.multiple) {
             this._multipleRemoveAll();
@@ -1869,7 +1871,7 @@ class Flexdatalist {
         if (clearAlias) {
             this._alias.value = '';
         }
-        if (prev !== '' && !init) {
+        if (hadContent && !init) {
             this._dispatch('change:flexdatalist', { value: '', text: '' });
             this._dispatch('clear:flexdatalist');
             this._dispatch('change');
