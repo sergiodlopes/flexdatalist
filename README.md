@@ -358,6 +358,14 @@ function CityPicker() {
 
 Check out the [examples and documentation](http://projects.sergiodinislopes.pt/flexdatalist/) page.
 
+## Development
+
+```bash
+pnpm install
+pnpm build   # build every package
+pnpm test    # run the core test suite (Vitest + happy-dom)
+```
+
 ## License
 
 Flexdatalist is licensed under the [MIT license](http://opensource.org/licenses/MIT).

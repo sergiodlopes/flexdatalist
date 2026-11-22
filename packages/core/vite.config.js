@@ -41,6 +41,12 @@ function umdJsCopy() {
 
 export default defineConfig({
     plugins: [flexdatalistExport(), umdJsCopy()],
+    // Vitest (`pnpm test`): the same export plugin lets tests import the
+    // classic-script source as an ES module.
+    test: {
+        environment: 'happy-dom',
+        include: ['test/**/*.test.js'],
+    },
     build: {
         lib: {
             entry: resolve(__dirname, 'src/index.js'),

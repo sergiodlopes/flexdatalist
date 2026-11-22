@@ -695,7 +695,10 @@ class Flexdatalist {
     /**
      * Remove a specific value (multiple mode only).
      *
-     * @param {string} val The serialised value to remove.
+     * With duplicate values (`allowDuplicateValues`), each value removes one
+     * tag: the first one holding it.
+     *
+     * @param {string|Array} val The serialised value(s) to remove.
      * @returns {this} Chainable.
      */
     removeValue(val) {
@@ -1590,7 +1593,7 @@ class Flexdatalist {
         const marked = this._alias._fdRemove;
         if (marked?.isConnected) {
             this._alias._fdRemove = null;
-            this._multipleRemove(marked.dataset.value);
+            this._multipleRemove(marked);
             return;
         }
         // Mark the last tag (skipping the "N More" control).
@@ -2004,21 +2007,15 @@ class Flexdatalist {
         li.addEventListener('click', () => this._multipleToggle(li));
         li.querySelector('.' + this._classes.remove)?.addEventListener('click', e => {
             e.stopPropagation();
-            this._multipleRemove(li.dataset.value);
+            // Remove this very tag: with allowDuplicateValues, a lookup by
+            // value would remove the first tag holding the same value.
+            this._multipleRemove(li);
         });
 
-        // Push value into serialised storage.
-        // Use serialised comparison: `val` is always a string but `current` items
-        // may be parsed objects (JSON mode) or numbers (numeric valueProperty),
-        // so `Array.includes` would produce false negatives from the type mismatch.
-        const current = this.getValue();
-        const valNorm = this._toStr(this._toObj(val));
-        if (!current.some(item => this._toStr(item) === valNorm)) {
-            // CSV current is string[], JSON current is object[] — push the matching type.
-            current.push(this._isCSV() ? String(val) : this._toObj(val));
-            this._value = this._toStr(current);
-            this._hiddenInput.value = this._value;
-        }
+        // Rebuild the value from the tags. It used to skip values already
+        // present, so with allowDuplicateValues the tags showed "Apple" three
+        // times while only one "Apple" was submitted.
+        this._multipleSync();
 
         this._alias.value = '';
         this._multipleHandleLimit();
@@ -2075,14 +2072,16 @@ class Flexdatalist {
     }
 
     /**
-     * Remove a tag by its serialised value.
+     * Remove a tag, given the tag element itself or its serialised value. With
+     * duplicate values (`allowDuplicateValues`) a value removes the first tag
+     * holding it.
      *
      * @private
-     * @param {string} val Serialised value (matches `li.dataset.value`).
+     * @param {string|HTMLLIElement} val Tag element, or serialised value (matches `li.dataset.value`).
      * @returns {{ value: string, text: string }|undefined} Removed item data.
      */
     _multipleRemove(val) {
-        const li = this._multipleFindLi(val);
+        const li = val instanceof HTMLElement ? val : this._multipleFindLi(val);
         if (!li) {
             return;
         }
