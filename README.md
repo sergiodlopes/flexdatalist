@@ -100,7 +100,7 @@ const [fd] = await Flexdatalist.init('#people', {
 - **Custom normaliser** -- plug in your own `normalizeString` function
 - **Keyword highlighting** -- matched text is wrapped in `<span class="highlight">`
 - **localStorage caching** -- cache remote and search results with configurable TTL and automatic garbage collection
-- **Chained relatives** -- link inputs so their values are sent with every request, with optional auto-disable
+- **Chained relatives** -- link inputs so their values are sent with every request, optionally read-only until a relative has a value
 - **Theming via CSS custom properties** -- override `--fdl-accent`, `--fdl-tag-bg`, etc.
 - **Dialog support** -- dropdown positions correctly inside `<dialog>` elements
 - **ARIA attributes** -- `aria-autocomplete`, `aria-expanded`, `aria-owns`, `role="listbox"` on results
@@ -119,7 +119,7 @@ All options can be set via the constructor, via `data-*` attributes (camelCase b
 | `data` | `array\|string` | `[]` | Static data array or URL to a JSON file |
 | `params` | `object\|function` | `{}` | Extra params sent with every request (or a `(keyword) => object` function) |
 | `relatives` | `string\|NodeList\|null` | `null` | CSS selector of inputs whose values are sent as `relatives[name]` |
-| `chainedRelatives` | `boolean` | `false` | Disable this input when all relatives are empty |
+| `chainedRelatives` | `boolean` | `false` | Make this input read-only while all relatives are empty (its value is still submitted) |
 | `resultsProperty` | `string` | `'results'` | Key in the JSON response holding the results array |
 
 ### Search

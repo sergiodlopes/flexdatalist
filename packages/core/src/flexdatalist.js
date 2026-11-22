@@ -58,7 +58,7 @@ class Flexdatalist {
          * @type {string|NodeList|null}
          */
         relatives: null,
-        /** @type {boolean} Disable this input when all relatives are empty. */
+        /** @type {boolean} Make this input read-only while all relatives are empty (it stays in the form). */
         chainedRelatives: false,
         /** @type {boolean} Cache remote results in localStorage. */
         cache: true,

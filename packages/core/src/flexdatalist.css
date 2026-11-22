@@ -348,6 +348,11 @@
     cursor: default;
     opacity: 0.7;
 }
+/* Single-value alias made read-only (readonly(true) or chainedRelatives) */
+input.flexdatalist-alias[readonly] {
+    background-color: var(--fdl-disabled-bg);
+    cursor: default;
+}
 
 /* The grow-able input cell */
 .flexdatalist-multiple li.input-container {
