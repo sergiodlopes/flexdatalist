@@ -109,7 +109,7 @@ const [fd] = await Flexdatalist.init('#people', {
 
 ## Options
 
-All options can be set via the constructor, via `data-*` attributes (camelCase becomes kebab-case), or at runtime with `setOption()`.
+All options can be set via the constructor, via `data-*` attributes (camelCase becomes kebab-case), or at runtime with `setOption()` (except `multiple`, `classPrefix` and `resultsContainer`, which need a new instance).
 
 ### Data Source
 
@@ -215,7 +215,7 @@ const [fd] = await Flexdatalist.init('#input', options);
 | `search(keyword)` | Programmatically trigger a search |
 | `closeResults()` | Close the results dropdown |
 | `getOption(name)` | Get an option value |
-| `setOption(name, value)` | Set an option value at runtime |
+| `setOption(name, value)` | Set an option value at runtime (normalised and applied like constructor options; `multiple`, `classPrefix` and `resultsContainer` need a new instance) |
 | `on(event, handler)` | Subscribe to an event |
 | `off(event, handler)` | Unsubscribe from an event |
 | `destroy(clear?)` | Destroy the instance and restore the original input |

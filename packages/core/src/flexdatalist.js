@@ -503,19 +503,37 @@ class Flexdatalist {
         o.disabled = o.disabled === null ? el.hasAttribute('disabled') : o.disabled;
         o.originalValue = this._value;
 
-        // Normalise string → array options.
+        this._normalizeOptions(o, sep);
+        return o;
+    }
+
+    /**
+     * Normalise options that accept several forms, and derive the defaults
+     * that depend on other options. Used by the constructor and setOption().
+     *
+     * `textProperty` and `visibleProperties` default to `searchIn`; when they
+     * were derived (not set explicitly) they follow later `searchIn` changes.
+     *
+     * @private
+     * @param {Object} o   Options object (modified in place).
+     * @param {string} [sep] Separator for string → array options.
+     */
+    _normalizeOptions(o, sep = o.valuesSeparator) {
+        // String → array options.
         if (typeof o.searchIn === 'string') {
             o.searchIn = o.searchIn.split(sep).map(s => s.trim());
         }
-        if (!o.textProperty) {
+        if (!o.textProperty || this._autoTextProperty) {
+            this._autoTextProperty = true;
             o.textProperty = o.searchIn[0];
         }
         if (typeof o.visibleProperties === 'string') {
             o.visibleProperties = o.visibleProperties.length > 0
                 ? o.visibleProperties.split(sep).map(s => s.trim())
-                : [...o.searchIn];
+                : [];
         }
-        if (!o.visibleProperties?.length) {
+        if (!o.visibleProperties?.length || this._autoVisibleProperties) {
+            this._autoVisibleProperties = true;
             o.visibleProperties = [...o.searchIn];
         }
 
@@ -525,8 +543,6 @@ class Flexdatalist {
         } else if (o.relatives instanceof NodeList) {
             o.relatives = [...o.relatives];
         }
-
-        return o;
     }
 
     // =========================================================================
@@ -544,14 +560,59 @@ class Flexdatalist {
     }
 
     /**
+     * Options that shape the DOM built by the constructor; changing them needs
+     * `destroy()` and a new instance.
+     *
+     * @type {string[]}
+     */
+    static structuralOptions = ['multiple', 'classPrefix', 'resultsContainer'];
+
+    /**
      * Set a single option value at runtime.
+     *
+     * The value is normalised like constructor options (e.g. a `searchIn`
+     * string is split, a `relatives` selector is resolved), and options with
+     * side effects are applied: `disabled` / `readonly` update the widget,
+     * `relatives` / `chainedRelatives` re-bind the chained behaviour,
+     * `limitOfValues` / `collapseAfterN` refresh the tags.
+     * Structural options (`Flexdatalist.structuralOptions`) are ignored with
+     * a warning.
      *
      * @param {string} name  Option key.
      * @param {*}      value New value.
      * @returns {this} Chainable.
      */
     setOption(name, value) {
-        this._options[name] = value;
+        const o = this._options;
+
+        if (Flexdatalist.structuralOptions.includes(name)) {
+            if (o.debug) {
+                console.warn(`Flexdatalist: "${name}" cannot change after initialisation; destroy() the instance and create a new one.`);
+            }
+            return this;
+        }
+        if (name === 'disabled') {
+            this._applyDisabled(!!value);
+            return this;
+        }
+        if (name === 'readonly') {
+            this._applyReadonly(!!value);
+            return this;
+        }
+
+        const rebindChained = name === 'relatives' || name === 'chainedRelatives';
+        if (rebindChained) this._teardownChained();
+        if (name === 'textProperty') this._autoTextProperty = !value;
+        if (name === 'visibleProperties') this._autoVisibleProperties = !value?.length;
+
+        o[name] = value;
+        this._normalizeOptions(o);
+
+        if (rebindChained) this._setupChained();
+        if (name === 'limitOfValues') this._multipleHandleLimit();
+        if (name === 'collapseAfterN' || name === 'collapsedValuesText') {
+            if (this._multipleEl) this._multipleCollapse();
+        }
         return this;
     }
 
@@ -837,12 +898,7 @@ class Flexdatalist {
         document.removeEventListener('focusout', this._onDocumentFocusOut, true);
         this._pendingRequests = [];
         window.removeEventListener('resize', this._onResize);
-        if (this._onRelativeChange) {
-            for (const rel of this._options.relatives ?? []) {
-                rel.removeEventListener('change', this._onRelativeChange);
-            }
-            this._onRelativeChange = null;
-        }
+        this._teardownChained();
         this._loadingStop();
         if (!this._customContainer) {
             this._resultsEl?.remove();
@@ -914,7 +970,7 @@ class Flexdatalist {
             this._label?.setAttribute('for', this._alias.id);
         }
 
-        this._setupChained(true);
+        this._setupChained();
     }
 
     /**
@@ -992,9 +1048,8 @@ class Flexdatalist {
      * relative inputs are empty.
      *
      * @private
-     * @param {boolean} init Whether this is the first call during setup.
      */
-    _setupChained(init) {
+    _setupChained() {
         const o = this._options;
         if (!o.relatives?.length || !o.chainedRelatives) return;
         const toggle = () => {
@@ -1004,6 +1059,21 @@ class Flexdatalist {
         this._onRelativeChange = toggle;
         for (const rel of o.relatives) rel.addEventListener('change', toggle);
         toggle();
+    }
+
+    /**
+     * Undo _setupChained(): remove the relatives' change listeners and the
+     * readonly state the chained behaviour applied.
+     *
+     * @private
+     */
+    _teardownChained() {
+        if (!this._onRelativeChange) return;
+        for (const rel of this._options.relatives ?? []) {
+            rel.removeEventListener('change', this._onRelativeChange);
+        }
+        this._onRelativeChange = null;
+        this._applyReadonly(false);
     }
 
     // =========================================================================
