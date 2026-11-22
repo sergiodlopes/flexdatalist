@@ -472,7 +472,7 @@ On the website the docs pages sit at the site root, next to a `core/` folder wit
 
 ```
 docs-dist/
-  index.html, examples.html, demo-api.js, demo-data.js, countries.json
+  index.html, examples.html, docs.css, docs.js, demo-api.js, demo-data.js, countries.json
   llms.txt
   core/flexdatalist.js
   core/flexdatalist.css
