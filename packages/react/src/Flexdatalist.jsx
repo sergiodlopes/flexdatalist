@@ -88,35 +88,29 @@ const Flexdatalist = forwardRef(function Flexdatalist(props, ref) {
             el.value = typeof value === 'object' ? JSON.stringify(value) : String(value);
         }
 
+        // Listen before constructing: the core may dispatch init/change
+        // events synchronously from its constructor.
         const handlers = [];
-
-        FlexdatalistCore.init(el, buildOptions()).then(([fd]) => {
-            instanceRef.current = fd;
-
-            for (const [eventName, propName] of EVENTS) {
-                const handler = (e) => {
-                    callbacksRef.current[propName]?.(e.detail, e);
-                };
-                el.addEventListener(eventName, handler);
-                handlers.push([eventName, handler]);
-            }
-
-            const changeHandler = (e) => {
-                internalUpdate.current = true;
-                callbacksRef.current.onChange?.(e.detail, e);
-                internalUpdate.current = false;
+        for (const [eventName, propName] of EVENTS) {
+            const handler = (e) => {
+                callbacksRef.current[propName]?.(e.detail, e);
             };
-            el.removeEventListener('change:flexdatalist', handlers.find(h => h[0] === 'change:flexdatalist')?.[1]);
-            el.addEventListener('change:flexdatalist', changeHandler);
-            handlers.push(['change:flexdatalist', changeHandler]);
-        });
+            el.addEventListener(eventName, handler);
+            handlers.push([eventName, handler]);
+        }
+
+        // Construct synchronously so the cleanup below always has the
+        // instance to destroy, even when unmounting before the initial
+        // value finished loading (or in StrictMode's mount/unmount/mount).
+        const fd = new FlexdatalistCore(el, buildOptions());
+        instanceRef.current = fd;
 
         return () => {
             for (const [eventName, handler] of handlers) {
                 el.removeEventListener(eventName, handler);
             }
-            instanceRef.current?.destroy();
-            instanceRef.current = null;
+            fd.destroy();
+            if (instanceRef.current === fd) instanceRef.current = null;
         };
     }, []);
 

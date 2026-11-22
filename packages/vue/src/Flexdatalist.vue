@@ -110,7 +110,14 @@ function buildOptions() {
     return opts;
 }
 
-onMounted(async () => {
+const handlers = [];
+
+function listen(el, eventName, handler) {
+    el.addEventListener(eventName, handler);
+    handlers.push([eventName, handler]);
+}
+
+onMounted(() => {
     const el = inputRef.value;
     if (props.modelValue !== '' && props.modelValue != null) {
         el.value = typeof props.modelValue === 'object'
@@ -118,25 +125,29 @@ onMounted(async () => {
             : String(props.modelValue);
     }
 
-    const [fd] = await FlexdatalistCore.init(el, buildOptions());
-    instance = fd;
-
+    // Listen before constructing: the core may dispatch init/change
+    // events synchronously from its constructor.
     for (let i = 0; i < EVENTS.length; i++) {
-        const eventName = EVENTS[i];
         const emitName = EMIT_NAMES[i];
-        el.addEventListener(eventName, (e) => {
-            emit(emitName, e.detail);
-        });
+        listen(el, EVENTS[i], (e) => emit(emitName, e.detail));
     }
-
-    el.addEventListener('change:flexdatalist', (e) => {
+    listen(el, 'change:flexdatalist', (e) => {
         internalUpdate = true;
         emit('update:modelValue', e.detail.value);
         internalUpdate = false;
     });
+
+    // Construct synchronously so unmounting before the initial value
+    // finished loading still destroys the instance.
+    instance = new FlexdatalistCore(el, buildOptions());
 });
 
 onBeforeUnmount(() => {
+    const el = inputRef.value;
+    for (const [eventName, handler] of handlers) {
+        el?.removeEventListener(eventName, handler);
+    }
+    handlers.length = 0;
     instance?.destroy();
     instance = null;
 });

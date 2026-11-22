@@ -120,28 +120,39 @@
     export function enable() { return instance?.enable(); }
     export function setReadonly(state) { return instance?.readonly(state); }
 
-    onMount(async () => {
+    const handlers = [];
+
+    function listen(eventName, handler) {
+        inputEl.addEventListener(eventName, handler);
+        handlers.push([eventName, handler]);
+    }
+
+    onMount(() => {
         if (value !== '' && value != null) {
             inputEl.value = typeof value === 'object' ? JSON.stringify(value) : String(value);
         }
 
-        const [fd] = await FlexdatalistCore.init(inputEl, buildOptions());
-        instance = fd;
-
+        // Listen before constructing: the core may dispatch init/change
+        // events synchronously from its constructor.
         for (const [eventName, emitName] of EVENTS) {
-            inputEl.addEventListener(eventName, (e) => {
-                dispatch(emitName, e.detail);
-            });
+            listen(eventName, (e) => dispatch(emitName, e.detail));
         }
-
-        inputEl.addEventListener('change:flexdatalist', (e) => {
+        listen('change:flexdatalist', (e) => {
             internalUpdate = true;
             value = e.detail.value;
             internalUpdate = false;
         });
+
+        // Construct synchronously so destroying the component before the
+        // initial value finished loading still destroys the instance.
+        instance = new FlexdatalistCore(inputEl, buildOptions());
     });
 
     onDestroy(() => {
+        for (const [eventName, handler] of handlers) {
+            inputEl?.removeEventListener(eventName, handler);
+        }
+        handlers.length = 0;
         instance?.destroy();
         instance = null;
     });
