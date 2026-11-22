@@ -992,6 +992,9 @@ class Flexdatalist {
 
         alias.addEventListener('focusin', () => {
             this._keyboardNavActive = false;
+            // Re-enable fetching disabled by the leave detection, so that e.g.
+            // click-to-show-all works again when the user comes back.
+            this._fetchDisabled = false;
             this._multipleEl?.classList.add(this._classes.multipleFocus);
             this._actAddValueOnLeave();
         });
@@ -1326,28 +1329,26 @@ class Flexdatalist {
      * @param {KeyboardEvent|InputEvent} e
      */
     _actSearch(e) {
-        const key = e.key;
+        // Search only when the text actually changed. On keyup, keys such as
+        // Escape, Shift, Home or Ctrl+C would close and reopen the results.
+        if (e.type !== 'input') return;
         const o = this._options;
         const kw = this._alias.value;
 
         this._fetchDisabled = false;
         clearTimeout(this._searchTimeout);
 
-        // Ignore navigation keys (arrows, enter).
-        const navKeys = ['Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-        if (!key || !navKeys.includes(key)) {
-            this._searchTimeout = setTimeout(() => {
-                const len = kw.length;
-                if ((o.minLength === 0 && len > 0) || len >= o.minLength) {
-                    this._resultsRemove();
-                    this._resultsLoadingStart();
-                    this._dataLoad(data => {
-                        this._resultsLoadingStop();
-                        this._searchGet(kw, data, matches => this._resultsShow(matches));
-                    });
-                }
-            }, o.searchDelay);
-        }
+        this._searchTimeout = setTimeout(() => {
+            const len = kw.length;
+            if ((o.minLength === 0 && len > 0) || len >= o.minLength) {
+                this._resultsRemove();
+                this._resultsLoadingStart();
+                this._dataLoad(data => {
+                    this._resultsLoadingStop();
+                    this._searchGet(kw, data, matches => this._resultsShow(matches));
+                });
+            }
+        }, o.searchDelay);
     }
 
     /**
@@ -1395,10 +1396,15 @@ class Flexdatalist {
     /**
      * Show all results when `minLength` is 0 and alias is empty.
      *
+     * Triggered by a click, by clearing the text, or by arriving with Tab
+     * (whose keyup lands on the alias). Other keyups are ignored so that
+     * Escape does not immediately reopen the list it just closed.
+     *
      * @private
      * @param {Event} e
      */
     _actShowAll(e) {
+        if (e.type === 'keyup' && e.key !== 'Tab') return;
         if (!this._alias.value.trim() && this._options.minLength === 0) {
             this._dataLoad(data => this._resultsShow(data));
         }
