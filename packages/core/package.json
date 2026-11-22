@@ -44,9 +44,12 @@
   "license": "MIT",
   "homepage": "https://github.com/sergiodlopes/flexdatalist",
   "scripts": {
-    "build": "vite build"
+    "build": "vite build",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "vite": "^6.4.3"
+    "happy-dom": "^15.11.7",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.4"
   }
 }
