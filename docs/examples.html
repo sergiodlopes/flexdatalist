@@ -83,11 +83,8 @@
         .nav-drop-menu a:hover { background: #eef2ff; color: #4f46e5; }
 
         /* result icons (iconProperty: 'thumb') and secondary text */
-        .flexdatalist-results li img.prop-thumb {
-            display: inline-block; /* Tailwind's preflight makes images block-level */
-            width: 28px; height: 28px; border-radius: 50%;
-            vertical-align: middle; margin-right: 0.5rem;
-        }
+        /* Thumbnails are sized by flexdatalist.css; this page makes them round. */
+        .flexdatalist-results { --fdl-icon-radius: 50%; }
         .flexdatalist-results li .prop-email { color: #6b7280; font-size: 0.8em; }
 
         /* flexdatalist-multiple inside our nicer wrapper */
@@ -903,8 +900,9 @@ visibleProperties: ['thumb', 'name', 'email'],
 iconProperty: 'thumb',          // property holding an image URL
 valueProperty: 'id', textProperty: 'name'
 
-/* size the icon yourself: */
-.flexdatalist-results li img.prop-thumb { width: 28px; height: 28px; }</div>
+/* flexdatalist.css sizes thumbnails (--fdl-icon-size: 1.75rem);
+   make them round: */
+.flexdatalist-results { --fdl-icon-radius: 50%; }</div>
             </div>
 
             <!-- grouped tabs, mixed records -->

@@ -269,18 +269,28 @@ Override CSS custom properties on any ancestor to theme the widget:
 
 ```css
 :root {
-    --fdl-accent:       #6366f1;   /* highlight / active color */
+    --fdl-accent:       #5a46df;   /* accent: tabs, focus, "add" option */
     --fdl-accent-fg:    #fff;      /* text on accent background */
-    --fdl-accent-light: #eef2ff;   /* soft tint for keyword highlight */
-    --fdl-tag-bg:       #eef2ff;   /* tag background */
-    --fdl-tag-border:   #c7d2fe;   /* tag border */
-    --fdl-tag-fg:       #4338ca;   /* tag text */
-    --fdl-radius:       0.5rem;    /* border radius */
+    --fdl-accent-light: #e6e0ff;   /* keyword highlight background */
+    --fdl-highlight-fg: #3b2aa8;   /* keyword highlight text */
+    --fdl-hover-bg:     #f3f3f1;   /* hovered / keyboard-active result */
+    --fdl-hover-fg:     #17171a;   /* text of the active result */
+    --fdl-tag-bg:       #efecfe;   /* tag background */
+    --fdl-tag-border:   #d5cefb;   /* tag border */
+    --fdl-tag-fg:       #4936c8;   /* tag text */
+    --fdl-radius:       0.625rem;  /* border radius */
+    --fdl-item-radius:  0.5rem;    /* result item radius */
+    --fdl-icon-size:    1.75rem;   /* thumbnail size (iconProperty) */
+    --fdl-icon-radius:  0.375rem;  /* thumbnail radius; 50% for round */
     --fdl-font-size:    0.875rem;  /* base font size */
-    --fdl-shadow:       0 4px 6px -1px rgba(0,0,0,.08),
-                        0 10px 25px -3px rgba(0,0,0,.08);
+    --fdl-shadow:       0 2px 4px rgba(23,23,26,.05),
+                        0 16px 40px -12px rgba(23,23,26,.18);
 }
 ```
+
+Surface colours (`--fdl-bg`, `--fdl-border`, `--fdl-text`, `--fdl-text-muted`, `--fdl-group-bg`, `--fdl-disabled-bg`, `--fdl-scrollbar`) have light and dark values. Dark mode follows the OS, or `data-theme="dark"` / the `.fdl-dark` class on an ancestor.
+
+Thumbnails from `iconProperty` are sized by the default CSS. Change them with `.flexdatalist-results { --fdl-icon-size: 2rem; --fdl-icon-radius: 50%; }`, which works whatever order the stylesheets load in, or with your own rule such as `.flexdatalist-results li img.prop-thumb { … }`.
 
 ## Migrating from v2 (jQuery)
 

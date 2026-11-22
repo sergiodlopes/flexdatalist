@@ -119,7 +119,7 @@ Instance (setters return `this` and can be chained): `ready` (Promise), `getValu
 
 ## Theming
 
-CSS custom properties: `--fdl-accent`, `--fdl-accent-fg`, `--fdl-accent-light`, `--fdl-tag-bg`, `--fdl-tag-border`, `--fdl-tag-fg`, `--fdl-radius`, `--fdl-font-size`, `--fdl-shadow`.
+CSS custom properties: `--fdl-accent`, `--fdl-accent-fg`, `--fdl-accent-light` (highlight background), `--fdl-highlight-fg`, `--fdl-hover-bg`, `--fdl-hover-fg`, `--fdl-tag-bg`, `--fdl-tag-border`, `--fdl-tag-fg`, `--fdl-radius`, `--fdl-item-radius`, `--fdl-icon-size` and `--fdl-icon-radius` (thumbnails from `iconProperty`, sized by the default CSS), `--fdl-font-size`, `--fdl-shadow`.
 
 ## React, Vue, Svelte
 
