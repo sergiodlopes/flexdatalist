@@ -348,6 +348,10 @@ await test('4 multiple', 'collapseAfterN 3', async () => {
     const control = page.locator('.flexdatalist-collapsed-control:visible');
     expect((await control.count()) === 1, 'collapse control');
     expect((await control.innerText()).includes('+2 more'), `label: ${await control.innerText()}`);
+    const visibleTags = await page.locator('#multi-collapse ~ ul li.value:visible').allInnerTexts();
+    expectEqual(visibleTags.map(text => text.replace('×', '').trim()).join(','), 'Apple,Banana,Cherry', 'only the first 3 tags visible');
+    await control.click();
+    expectEqual(await page.locator('#multi-collapse ~ ul li.value:visible').count(), 5, 'all 5 tags visible after expanding');
 });
 await test('4 multiple', 'paste a list', async () => {
     const input = await alias('multi_paste');

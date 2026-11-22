@@ -423,23 +423,36 @@ li.flexdatalist-collapsed-control {
 }
 
 /* ─── Remove (×) button inside tags ────────────────────────── */
+/* The × is drawn with two lines rather than the &times; glyph,
+   which sits low in most fonts and never centres in the circle. */
 .flexdatalist-multiple li.value span.fdl-remove {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
     width: 1.1rem;
     height: 1.1rem;
     margin-left: 0.1rem;
     border-radius: 50%;
-    font-size: 0.85rem;
-    line-height: 1.1rem;
-    font-weight: 700;
+    font-size: 0; /* hides the &times; text, kept for the DOM */
     cursor: pointer;
     color: var(--fdl-tag-fg);
     opacity: 0.55;
     transition: opacity 0.15s, background 0.15s;
-    /* reset absolute positioning from old CSS */
-    position: static;
+}
+.flexdatalist-multiple li.value span.fdl-remove::before,
+.flexdatalist-multiple li.value span.fdl-remove::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0.5rem;
+    height: 1.5px;
+    border-radius: 1px;
+    background: currentColor;
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+.flexdatalist-multiple li.value span.fdl-remove::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
 }
 .flexdatalist-multiple li.value span.fdl-remove:hover {
     opacity: 1;
@@ -448,7 +461,8 @@ li.flexdatalist-collapsed-control {
 
 /* ─── Utility ───────────────────────────────────────────────── */
 .flexdatalist-hidden,
-li.flexdatalist-collapsed-item {
+.flexdatalist-multiple li.value.flexdatalist-collapsed-item {
+    /* Must outrank ".flexdatalist-multiple li.value", which shows tags */
     display: none;
 }
 
