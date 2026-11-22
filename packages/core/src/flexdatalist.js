@@ -1910,6 +1910,11 @@ class Flexdatalist {
         li.remove();
         this._multipleSync();
         this._multipleHandleLimit();
+        // Refresh the "N More" control if the tags are currently collapsed
+        // (left alone when the user expanded them).
+        if (this._multipleEl.querySelector('li.' + this._classes.collapsedControl)) {
+            this._multipleCollapse();
+        }
 
         this._dispatch('after:flexdatalist.remove', this._changePayload());
         this._dispatch('change:flexdatalist', this._changePayload());
@@ -2002,9 +2007,9 @@ class Flexdatalist {
         const classes = this._classes;
         if (o.collapseAfterN === false) return;
         const items = [...this._multipleEl.querySelectorAll('li.' + classes.value)];
-        if (items.length <= o.collapseAfterN) return;
 
-        this._multipleExpand(); // reset first
+        this._multipleExpand(); // reset first (also drops a stale "N More")
+        if (items.length <= o.collapseAfterN) return;
 
         items.forEach((item, i) => {
             if (i + 1 > o.collapseAfterN) item.classList.add(classes.collapsedItem);
