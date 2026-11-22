@@ -384,6 +384,7 @@ class Flexdatalist {
             inputContainer:    'input-container',
             value:             'value',
             valueToggle:       'toggle',
+            valueMarked:       'marked',
             valueText:         'text',
             remove:            'fdl-remove',
             collapsedItem:     'flexdatalist-collapsed-item',
@@ -1098,6 +1099,7 @@ class Flexdatalist {
 
         alias.addEventListener('focusout', () => {
             this._multipleEl?.classList.remove(this._classes.multipleFocus);
+            if (this._multipleEl) this._unmarkTag();
             this._actClearText();
             this._actClearValue();
         });
@@ -1494,20 +1496,37 @@ class Flexdatalist {
      */
     _actBackspace(e) {
         const o = this._options;
-        if (!o.removeOnBackspace || !o.multiple || e.key !== 'Backspace') return;
+        // keydown only: handling keyup as well made one press mark *and*
+        // remove the tag. Key repeat (holding Backspace) still removes tags
+        // one by one, two repeats each.
+        if (!o.removeOnBackspace || !o.multiple || e.type !== 'keydown') return;
 
-        if (!this._alias.value.length) {
-            const toRemove = this._alias._fdRemove;
-            if (toRemove) {
-                this._multipleRemove(toRemove.dataset.value);
-                this._alias._fdRemove = null;
-            } else {
-                const ic = this._multipleEl?.querySelector('li.' + this._classes.inputContainer);
-                this._alias._fdRemove = ic?.previousElementSibling ?? null;
-            }
-        } else {
-            this._alias._fdRemove = null;
+        if (e.key !== 'Backspace' || this._alias.value.length) {
+            this._unmarkTag();
+            return;
         }
+
+        const marked = this._alias._fdRemove;
+        if (marked?.isConnected) {
+            this._alias._fdRemove = null;
+            this._multipleRemove(marked.dataset.value);
+            return;
+        }
+        // Mark the last tag (skipping the "N More" control).
+        const tags = this._multipleEl?.querySelectorAll('li.' + this._classes.value);
+        const last = tags?.[tags.length - 1] ?? null;
+        last?.classList.add(this._classes.valueMarked);
+        this._alias._fdRemove = last;
+    }
+
+    /**
+     * Clear the "next Backspace removes this tag" mark.
+     *
+     * @private
+     */
+    _unmarkTag() {
+        this._alias._fdRemove?.classList.remove(this._classes.valueMarked);
+        this._alias._fdRemove = null;
     }
 
     /**

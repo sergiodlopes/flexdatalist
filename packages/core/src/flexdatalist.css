@@ -406,6 +406,17 @@ li.flexdatalist-collapsed-control {
     opacity: 0.5;
 }
 
+/* Tag marked by a first Backspace (the next one removes it) */
+.flexdatalist-multiple li.value.marked {
+    background: var(--fdl-accent);
+    border-color: var(--fdl-accent);
+    color: var(--fdl-accent-fg);
+}
+.flexdatalist-multiple li.value.marked span.fdl-remove {
+    color: var(--fdl-accent-fg);
+    opacity: 1;
+}
+
 /* ─── Remove (×) button inside tags ────────────────────────── */
 .flexdatalist-multiple li.value span.fdl-remove {
     display: inline-flex;
