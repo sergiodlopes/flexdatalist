@@ -440,6 +440,8 @@ class Flexdatalist {
             }, true);
         } else {
             this._applyDisabled(this._options.disabled);
+            // Fired synchronously here; listen on the element before constructing to catch it.
+            this._dispatch('init:flexdatalist', this._options);
         }
     }
 
