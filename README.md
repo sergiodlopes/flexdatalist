@@ -169,7 +169,6 @@ All options can be set via the constructor, via `data-*` attributes (camelCase b
 |---|---|---|---|
 | `selectionRequired` | `boolean` | `false` | Require selecting a result (disables free-text) |
 | `disabled` | `boolean\|null` | `null` | Start disabled (inferred from `[disabled]` attribute) |
-| `redoSearchOnFocus` | `boolean` | `true` | Re-trigger search when the input re-gains focus |
 | `showAddNewItem` | `boolean` | `false` | Show "Add new item" option when no results match |
 | `addNewItemText` | `string` | `'No results found for "{keyword}". Click to add it.'` | Text for the add-new option |
 
@@ -356,6 +355,8 @@ function CityPicker() {
 ## Demo & Documentation
 
 Check out the [examples and documentation](http://projects.sergiodinislopes.pt/flexdatalist/) page.
+
+Using an AI coding assistant? Point it at [`packages/core/llms.txt`](packages/core/llms.txt), a compact reference with the server response format, all options and the most common integration mistakes. It is also shipped in the npm package.
 
 ## License
 

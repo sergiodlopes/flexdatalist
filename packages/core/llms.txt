@@ -1,0 +1,134 @@
+# Flexdatalist
+
+> Zero-dependency autocomplete / tag input for plain `<input>` elements (ES6 class, v3). Works without a framework: server-rendered pages (PHP, Django, Rails, templates) can use it with a script tag and `data-*` attributes. Supports remote JSON, static arrays, `<datalist>`, multiple values as tags, grouped results, keyboard navigation and localStorage caching. v3 is a rewrite of the old jQuery plugin (v2); the jQuery API `$(el).flexdatalist()` does NOT exist in v3.
+
+Package: `flexdatalist` (npm). Source of truth for options: `Flexdatalist.defaults` in `src/flexdatalist.js`.
+
+## Install
+
+```html
+<!-- No build step -->
+<link rel="stylesheet" href="flexdatalist.css">
+<script src="flexdatalist.js"></script>
+```
+
+```js
+// Bundler
+import Flexdatalist from 'flexdatalist';
+import 'flexdatalist/css';
+// CommonJS: const { Flexdatalist } = require('flexdatalist');
+```
+
+## How it works (read this first)
+
+- The original `<input>` is kept but hidden; it holds the submitted value. Put `name` on it, as usual. Flexdatalist creates a visible "alias" input next to it for typing; the alias is never submitted.
+- The value (what the form submits) and the text (what the user sees) are different things. `valueProperty` selects the value, `textProperty` the text. With neither set, both come from the first `searchIn` property (`label` by default).
+- Every `<input class="flexdatalist">` on the page initialises itself on `DOMContentLoaded`, with options taken from its `data-*` attributes.
+- Initialisation is asynchronous. Use `await Flexdatalist.init(...)` or `await instance.ready` before you read or set values.
+- Option precedence: `data-*` attributes override JS options, which override `Flexdatalist.defaults`. `data-*` values are parsed as JSON when possible (`data-min-length="2"` gives a number; `data-search-in="name,city"` gives a comma-separated list).
+
+## Minimal examples
+
+Remote search, no JavaScript:
+
+```html
+<input type="text" name="city_id" class="flexdatalist"
+       data-url="/api/cities"
+       data-min-length="2"
+       data-search-in="name"
+       data-value-property="id"
+       data-search-disabled="true">
+```
+
+Static data, multiple values (tags):
+
+```js
+const [tagsInput] = await Flexdatalist.init('#tags', {
+    data: [{ id: 1, name: 'PHP' }, { id: 2, name: 'JavaScript' }],
+    searchIn: ['name'],
+    valueProperty: 'id',
+    multiple: true,
+    minLength: 0,          // show every item on focus
+    selectionRequired: true,
+});
+tagsInput.on('change:flexdatalist', event => console.log(event.detail)); // { value, text }
+```
+
+## Remote endpoint contract
+
+Request (GET by default; set `requestType: 'post'` and optionally `requestContentType: 'json'`):
+
+- `keyword`: the typed text (rename with `keywordParamName`)
+- `contain`: the value of `searchContain` (rename with `searchContainParamName`)
+- `selected`: the current stored value
+- `original`: the input's value at init time
+- `relatives[<name>]`: values of the inputs matched by `relatives`
+- plus every key in `params` (an object, or `(keyword) => object`)
+- headers: `Accept: application/json`, `Flexdatalist-request: true`, plus `requestHeaders`
+
+Response: either a JSON array of objects, or an object with the array under `results` (rename with `resultsProperty`):
+
+```json
+{ "results": [ { "id": 7, "name": "Lisbon", "country": "PT" } ] }
+```
+
+The response may also include an `options` object; its keys are merged into the instance options.
+
+## Common mistakes
+
+1. **The server filtered, but the results don't show.** By default the returned items are filtered again in the browser against `searchIn` (default `['label']`, starts-with match). If the server already does the search, set `searchDisabled: true`. Otherwise set `searchIn` to properties your items actually have.
+2. **Items have no `label`.** Set `searchIn` (and/or `textProperty`) to a property your items have, otherwise nothing matches or displays.
+3. **A pre-filled value shows the id instead of the text.** With `valueProperty` set, an initial value (or `setValue()`) is resolved by loading data with an EMPTY `keyword` and looking for an item whose `valueProperty` equals the value. A remote endpoint must therefore return the matching item(s) when `keyword` is empty and `selected` is set.
+4. **Stale results during development.** `cache: true` (default) stores responses in localStorage for `cacheLifetime` seconds (default 60). Set `cache: false` while developing an endpoint.
+5. **Nothing happens on the first keystrokes.** `minLength` defaults to 3. Use `0` to show all items on focus.
+6. **Reading the value right after init.** Await `init()` / `instance.ready` first.
+7. **The jQuery API.** `$('#x').flexdatalist(...)` is v2. In v3 use `Flexdatalist.init('#x', options)` and `instance.on(...)`.
+
+## Options (defaults)
+
+Data: `url` (null), `data` ([], array or URL of a JSON file), `params` ({}), `relatives` (null, CSS selector), `chainedRelatives` (false, disable while all relatives are empty), `resultsProperty` ('results').
+Search: `minLength` (3), `searchIn` (['label']), `searchContain` (false), `searchEqual` (false), `searchByWord` (false), `searchDisabled` (false), `searchDelay` (300 ms), `normalizeString` (null, `(string) => string`; accents are already stripped by default).
+Display: `textProperty` (null; property or `'{name} ({country})'` pattern), `valueProperty` (null; property, list of properties, or `'*'` = whole item as JSON), `visibleProperties` (defaults to `searchIn`; supports `{placeholder}` patterns), `iconProperty` ('thumb'), `groupBy` (false), `groupView` ('headers' | 'tabs'), `groupTabAnimation` (true), `maxShownResults` (100, 0 = unlimited), `focusFirstResult` (false), `noResultsText`, `resultsLoader` (null, spinner image URL), `resultsContainer` (null; element or selector to render results into instead of a dropdown), `classPrefix` ('', e.g. 'fd3-' to coexist with v2 CSS).
+Multiple: `multiple` (null = from the `multiple` attribute), `limitOfValues` (0 = unlimited), `valuesSeparator` (','), `allowDuplicateValues` (false), `removeOnBackspace` (true), `toggleSelected` (false), `collapseAfterN` (50 or false), `collapsedValuesText` ('{count} More').
+Behaviour: `selectionRequired` (false; true = no free text), `disabled` (null = from the `disabled` attribute), `showAddNewItem` (false; fires `addnew:flexdatalist`), `addNewItemText`.
+Request: `requestType` ('get' | 'post'), `requestContentType` ('x-www-form-urlencoded' | 'json'), `requestHeaders` (null), `keywordParamName` ('keyword'), `searchContainParamName` ('contain').
+Cache: `cache` (true), `cacheLifetime` (60 s).
+Other: `debug` (true, logs warnings to the console).
+
+## API
+
+Static: `Flexdatalist.init(selectorOrElements, options?) => Promise<Flexdatalist[]>`, `Flexdatalist.getInstance(element) => Flexdatalist | null`, `Flexdatalist.defaults` (edit to change global defaults).
+
+Instance (setters return `this` and can be chained): `ready` (Promise), `getValue()` (string in single mode; array in multiple mode; object when `valueProperty: '*'`), `setValue(value)`, `addValue(value)`, `removeValue(value)`, `toggleValue(value)`, `clear()`, `getText(format?)` ('array' default, 'string', or a custom separator), `search(keyword)`, `closeResults()`, `disable()`, `enable()`, `readonly(state?)`, `isDisabled()`, `isReadonly()`, `getOption(name)`, `setOption(name, value)`, `on(event, handler)`, `off(event, handler)`, `destroy(clear?)`.
+
+## Events
+
+`CustomEvent`s dispatched on the original input; the payload is in `event.detail`. Listen with `instance.on(...)` or `input.addEventListener(...)`. A native `change` event is also fired when the value changes.
+
+- `init:flexdatalist` (options)
+- `select:flexdatalist` (item), `before:flexdatalist.select`, `after:flexdatalist.select`
+- `change:flexdatalist` ({ value, text }), `clear:flexdatalist`
+- `addnew:flexdatalist` (keyword)
+- `before:flexdatalist.value` / `after:flexdatalist.value`
+- `before:flexdatalist.remove` (value) / `after:flexdatalist.remove` ({ value, text })
+- `before:flexdatalist.remove.all` / `after:flexdatalist.remove.all`
+- `before:flexdatalist.toggle` / `after:flexdatalist.toggle` ({ value, text, action })
+- `before:flexdatalist.data` / `after:flexdatalist.data` (data)
+- `before:flexdatalist.search` ({ keywords, data }) / `after:flexdatalist.search` ({ keywords, data, results })
+- `show:flexdatalist.results` / `shown:flexdatalist.results` (items), `item:flexdatalist.results` (item), `empty:flexdatalist.results` ([text]), `remove:flexdatalist.results`, `removed:flexdatalist.results`
+
+## Theming
+
+CSS custom properties: `--fdl-accent`, `--fdl-accent-fg`, `--fdl-accent-light`, `--fdl-tag-bg`, `--fdl-tag-border`, `--fdl-tag-fg`, `--fdl-radius`, `--fdl-font-size`, `--fdl-shadow`.
+
+## Framework adapters (thin wrappers around the same core)
+
+- Vue 3: `flexdatalist-vue` (`v-model`, events as `@select`, `@change`...)
+- React: `flexdatalist-react` (`onSelect`, `onChange`... props; methods through `ref`)
+- Svelte: `flexdatalist-svelte` (`bind:value`, `on:select`...)
+
+## Links
+
+- [README](https://github.com/sergiodlopes/flexdatalist/blob/main/README.md): full documentation
+- [Source](https://github.com/sergiodlopes/flexdatalist/blob/main/packages/core/src/flexdatalist.js): JSDoc on every option and method
+- [Demo](http://projects.sergiodinislopes.pt/flexdatalist/)

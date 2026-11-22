@@ -113,7 +113,11 @@ All events are dispatched as `CustomEvent` on the original `<input>`. Access dat
 | `before:flexdatalist.search` | `{ keywords, data }` |
 | `after:flexdatalist.search` | `{ keywords, data, results }` |
 
-See the [source documentation](packages/core/src/flexdatalist.js) for the full event list.
+See the [source documentation](src/flexdatalist.js) for the full event list.
+
+## For AI assistants
+
+[`llms.txt`](llms.txt) is a compact reference written for LLMs and coding agents. It covers the server response format, every option, and the most common integration mistakes. It is included in the npm package (`node_modules/flexdatalist/llms.txt`).
 
 ## Framework Adapters
 

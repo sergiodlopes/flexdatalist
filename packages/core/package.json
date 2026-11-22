@@ -17,7 +17,8 @@
   "files": [
     "dist",
     "src/flexdatalist.js",
-    "src/flexdatalist.css"
+    "src/flexdatalist.css",
+    "llms.txt"
   ],
   "style": "dist/flexdatalist.css",
   "repository": {
