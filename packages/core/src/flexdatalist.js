@@ -339,8 +339,29 @@ class Flexdatalist {
         /** @type {boolean} Set by destroy(); late async callbacks become no-ops. */
         this._destroyed = false;
 
-        /** @type {Function} Window resize handler (kept so destroy() can remove it). */
-        this._onResize = () => this._position();
+        /** @type {number|null} requestAnimationFrame handle for a pending reposition. */
+        this._repositionFrame = null;
+
+        /**
+         * Reposition the open dropdown and loading bar, at most once per frame.
+         * Called on window resize, on scroll anywhere (capture, so scrolling
+         * containers count) and when the alias/tags wrapper changes size.
+         * Kept so destroy() can remove it.
+         * @type {Function}
+         */
+        this._onResize = () => {
+            if (this._repositionFrame !== null) return;
+            const schedule = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : callback => setTimeout(callback, 16);
+            this._repositionFrame = schedule(() => {
+                this._repositionFrame = null;
+                if (this._destroyed) return;
+                if (this._resultsEl?.isConnected) this._position();
+                if (this._loadingEl?.isConnected) this._position(this._loadingEl);
+            });
+        };
+
+        /** @type {ResizeObserver|null} Watches the alias / tags wrapper size. */
+        this._resizeObserver = null;
 
         /** @type {Function|null} Relatives change handler (kept so destroy() can remove it). */
         this._onRelativeChange = null;
@@ -430,6 +451,11 @@ class Flexdatalist {
         this._bindAlias();
 
         window.addEventListener('resize', this._onResize);
+        document.addEventListener('scroll', this._onResize, { capture: true, passive: true });
+        if (typeof ResizeObserver === 'function') {
+            this._resizeObserver = new ResizeObserver(this._onResize);
+            this._resizeObserver.observe(this._multipleEl ?? this._alias);
+        }
         document.addEventListener('focusout', this._onDocumentFocusOut, true);
         this._cacheGC();
 
@@ -899,6 +925,13 @@ class Flexdatalist {
         document.removeEventListener('focusout', this._onDocumentFocusOut, true);
         this._pendingRequests = [];
         window.removeEventListener('resize', this._onResize);
+        document.removeEventListener('scroll', this._onResize, { capture: true });
+        this._resizeObserver?.disconnect();
+        this._resizeObserver = null;
+        if (this._repositionFrame !== null) {
+            (typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout)(this._repositionFrame);
+            this._repositionFrame = null;
+        }
         this._teardownChained();
         this._loadingStop();
         if (!this._customContainer) {
