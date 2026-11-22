@@ -308,6 +308,24 @@ class Flexdatalist {
         /** @type {number|null} setInterval handle for leave detection. */
         this._leaveInterval = null;
 
+        /** @type {boolean} Whether this instance has a fetch in flight. */
+        this._requestInFlight = false;
+
+        /** @type {boolean} Set by destroy(); late async callbacks become no-ops. */
+        this._destroyed = false;
+
+        /** @type {Function} Window resize handler (kept so destroy() can remove it). */
+        this._onResize = () => this._position();
+
+        /** @type {Function|null} Relatives change handler (kept so destroy() can remove it). */
+        this._onRelativeChange = null;
+
+        /** @type {HTMLLabelElement|null} Label re-pointed at the alias (restored by destroy()). */
+        this._label = null;
+
+        /** @type {HTMLElement|null} This instance's loading bar element. */
+        this._loadingEl = null;
+
         /** @type {Object} Resolved options for this instance. */
         this._options = this._buildOptions(options);
 
@@ -385,7 +403,7 @@ class Flexdatalist {
         this._setUp();
         this._bindAlias();
 
-        window.addEventListener('resize', () => this._position());
+        window.addEventListener('resize', this._onResize);
         this._cacheGC();
 
         // Save the initial value before selectionRequired's _clearValue wipes it.
@@ -780,7 +798,31 @@ class Flexdatalist {
         const container = this._multipleEl ?? this._alias;
         const classes = this._classes;
 
-        el.classList.remove(classes.root, classes.set);
+        // Stop timers and global/foreign listeners so nothing keeps this
+        // instance alive or runs against removed DOM after destruction.
+        this._destroyed = true;
+        clearTimeout(this._searchTimeout);
+        clearInterval(this._leaveInterval);
+        this._searchTimeout = null;
+        this._leaveInterval = null;
+        this._pendingRequest = null;
+        window.removeEventListener('resize', this._onResize);
+        if (this._onRelativeChange) {
+            for (const rel of this._options.relatives ?? []) {
+                rel.removeEventListener('change', this._onRelativeChange);
+            }
+            this._onRelativeChange = null;
+        }
+        this._loadingStop();
+        if (!this._customContainer) {
+            this._resultsEl?.remove();
+        }
+        if (this._label && this._label.getAttribute('for') === this._alias?.id) {
+            this._label.setAttribute('for', el.id);
+        }
+        this._label = null;
+
+        el.classList.remove(classes.root, classes.set, classes.loading);
         el.style.position = '';
         el.style.top = '';
         el.style.left = '';
@@ -838,7 +880,8 @@ class Flexdatalist {
 
         // Re-point any <label> at the alias so click-to-focus works.
         if (el.id) {
-            document.querySelector(`label[for="${el.id}"]`)?.setAttribute('for', this._alias.id);
+            this._label = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+            this._label?.setAttribute('for', this._alias.id);
         }
 
         this._setupChained(true);
@@ -928,6 +971,7 @@ class Flexdatalist {
             const allEmpty = o.relatives.every(r => this._isEmpty(r.value));
             this._applyReadonly(allEmpty);
         };
+        this._onRelativeChange = toggle;
         for (const rel of o.relatives) rel.addEventListener('change', toggle);
         toggle();
     }
@@ -2056,7 +2100,7 @@ class Flexdatalist {
         const o = this._options;
         const el = this._hiddenInput;
         const classes = this._classes;
-        if (el.classList.contains(classes.loading)) {
+        if (this._requestInFlight) {
             // A fetch is already in-flight. Save this request as pending so its
             // callback is not silently dropped (e.g. init value-load vs. a fast
             // server that triggers a second _dataLoad before the first resolves).
@@ -2064,6 +2108,7 @@ class Flexdatalist {
             return;
         }
         this._pendingRequest = null;
+        this._requestInFlight = true;
         el.classList.add(classes.loading);
 
         let url = settings.url;
@@ -2092,16 +2137,22 @@ class Flexdatalist {
 
         fetch(url, fetchOpts)
             .then(r => r.json())
-            .then(data => settings.success(this._extractRemoteData(data)))
+            .then(data => {
+                // The instance was destroyed while the request was in flight.
+                if (this._destroyed) return;
+                settings.success(this._extractRemoteData(data));
+            })
             .catch(err => {
                 if (o.debug) {
                     console.error('Flexdatalist fetch error:', err);
                 }
             })
             .finally(() => {
-                el.classList.remove(classes.loading);
+                this._requestInFlight = false;
+                // After destroy() the element may already belong to a new instance.
+                if (!this._destroyed) el.classList.remove(classes.loading);
                 // If a request arrived while this one was in-flight, run it now.
-                if (this._pendingRequest) {
+                if (this._pendingRequest && !this._destroyed) {
                     const pending = this._pendingRequest;
                     this._pendingRequest = null;
                     this._request(pending);
@@ -2158,21 +2209,25 @@ class Flexdatalist {
     _loadingStart() {
         const target = this._multipleEl ?? this._alias;
         const classes = this._classes;
+        this._loadingStop();
         target.classList.add(classes.fetching);
         const anim = document.createElement('div');
         anim.className = classes.fetchAnimation;
         anim._fdTarget = target;
         document.body.appendChild(anim);
         this._position(anim, target);
+        this._loadingEl = anim;
     }
 
     /**
-     * Remove the loading bar.
+     * Remove this instance's loading bar (other instances keep theirs).
      *
      * @private
      */
     _loadingStop() {
-        document.querySelectorAll('.' + this._classes.fetchAnimation).forEach(el => el.remove());
+        this._loadingEl?.remove();
+        this._loadingEl = null;
+        (this._multipleEl ?? this._alias)?.classList.remove(this._classes.fetching);
     }
 
     // =========================================================================
