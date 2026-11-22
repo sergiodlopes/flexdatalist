@@ -466,6 +466,24 @@ pnpm test:demos -- remote               # only tests whose name contains "remote
 
 When you add or change a demo, add or update its test in [`tests/demos.test.mjs`](tests/demos.test.mjs).
 
+### Publishing the docs
+
+On the website the docs pages sit at the site root, next to a `core/` folder with the plugin. `pnpm docs:build` writes that layout to `docs-dist/`, rewriting the `../packages/core/src/` paths to `core/`:
+
+```
+docs-dist/
+  index.html, examples.html, demo-api.js, demo-data.js, countries.json
+  core/flexdatalist.js
+  core/flexdatalist.css
+```
+
+Upload the contents of `docs-dist/` to the site root as they are. `pnpm test:docs-build` builds the folder and runs every demo test against it, served the way the website serves it.
+
+```bash
+pnpm docs:build        # writes docs-dist/
+pnpm test:docs-build   # builds, then tests the built site
+```
+
 ## License
 
 Flexdatalist is licensed under the [MIT license](http://opensource.org/licenses/MIT).
