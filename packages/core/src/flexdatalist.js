@@ -1849,15 +1849,31 @@ class Flexdatalist {
         this._dispatch('before:flexdatalist.toggle', togglePayload);
 
         li.classList.toggle(classes.disabled, action === 'disable');
-
-        this._value = this._toStr(
-            [...this._multipleEl.querySelectorAll(`li.${classes.valueToggle}:not(.${classes.disabled})`)].map(l => l.dataset.value)
-        );
-        this._hiddenInput.value = this._value;
+        this._multipleSync();
 
         this._dispatch('after:flexdatalist.toggle', togglePayload);
         this._dispatch('change:flexdatalist', this._changePayload());
         this._dispatch('change');
+    }
+
+    /**
+     * Rebuild the stored value and the display-text list from the tag
+     * elements. Toggled-off tags (`toggleSelected`) keep their text but are
+     * left out of the value. JSON tags are parsed back to objects so they are
+     * not double-encoded.
+     *
+     * @private
+     */
+    _multipleSync() {
+        if (!this._multipleEl) return;
+        const classes = this._classes;
+        const tags = [...this._multipleEl.querySelectorAll('li.' + classes.value)];
+        this._texts = tags.map(tag => tag.dataset.text);
+        const active = tags
+            .filter(tag => !tag.classList.contains(classes.disabled))
+            .map(tag => this._isCSV() ? tag.dataset.value : this._toObj(tag.dataset.value));
+        this._value = this._toStr(active);
+        this._hiddenInput.value = this._value;
     }
 
     /**
@@ -1873,16 +1889,12 @@ class Flexdatalist {
             return;
         }
 
-        const all = [...this._multipleEl.querySelectorAll('li:not(.input-container)')];
-        const idx = all.indexOf(li);
         const arg = { value: li.dataset.value, text: li.dataset.text };
 
-        const current = this.getValue();
-        current.splice(idx, 1);
-        this._value = this._toStr(current);
-        this._hiddenInput.value = this._value;
-        this._texts.splice(idx, 1);
+        // Rebuild from the DOM rather than splicing by position: the stored
+        // value omits toggled-off tags, so DOM indexes did not match it.
         li.remove();
+        this._multipleSync();
         this._multipleHandleLimit();
 
         this._dispatch('after:flexdatalist.remove', this._changePayload());
