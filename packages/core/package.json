@@ -49,7 +49,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "happy-dom": "^15.11.7",
+    "happy-dom": "^21.0.4",
     "vite": "^6.4.3",
     "vitest": "^3.2.4"
   }
