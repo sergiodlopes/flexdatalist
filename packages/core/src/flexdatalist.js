@@ -2463,8 +2463,13 @@ class Flexdatalist {
         if (typeof d === 'string' && d.startsWith('[{')) {
             d = JSON.parse(d);
         }
-        if (d?.options) {
-            Object.assign(this._options, d.options);
+        // Option overrides sit next to the results ({ results: [...], options: {...} }).
+        // They used to be read from the results array itself, so they were never applied.
+        const serverOptions = this._isObj(data) && !Array.isArray(data) ? data.options : undefined;
+        if (this._isObj(serverOptions)) {
+            for (const [name, value] of Object.entries(serverOptions)) {
+                this.setOption(name, value);
+            }
         }
         return this._isObj(d) ? d : [];
     }
