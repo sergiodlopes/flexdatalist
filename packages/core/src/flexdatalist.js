@@ -2395,7 +2395,9 @@ class Flexdatalist {
     _searchMatch(item, keywords) {
         const o = this._options;
         const out = { ...item };
-        const found = [];
+        // Distinct keywords matched in any property (a Set, so a word found in
+        // two properties is not counted twice).
+        const found = new Set();
 
         for (const prop of o.searchIn) {
             const raw = this._prop(item, prop);
@@ -2408,7 +2410,7 @@ class Flexdatalist {
 
             for (const kw of keywords) {
                 if (this._searchFind(kw, parts)) {
-                    found.push(kw);
+                    found.add(kw);
                     hl = this._hlMark(kw, hl);
                 }
             }
@@ -2417,7 +2419,13 @@ class Flexdatalist {
             }
         }
 
-        if (!found.length || (o.searchByWord && found.length < keywords.length - 1)) {
+        if (!found.size) {
+            return false;
+        }
+        // searchByWord: keywords = [whole phrase, ...words]. Match when the
+        // whole phrase matched, or else when every individual word did.
+        const [phrase, ...words] = keywords;
+        if (o.searchByWord && words.length && !found.has(phrase) && !words.every(word => found.has(word))) {
             return false;
         }
         return out;
@@ -2491,7 +2499,8 @@ class Flexdatalist {
             const extra = [];
             for (const kw of kws) {
                 if (kw.includes(' ')) {
-                    extra.push(...kw.split(' '));
+                    // Collapse repeated spaces: an empty "word" matches everything.
+                    extra.push(...kw.split(/\s+/).filter(Boolean));
                 }
             }
             kws = [...kws, ...extra];
