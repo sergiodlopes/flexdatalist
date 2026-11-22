@@ -5,15 +5,18 @@
   "type": "module",
   "main": "dist/flexdatalist-vue.es.js",
   "module": "dist/flexdatalist-vue.es.js",
+  "types": "src/index.d.ts",
   "exports": {
     ".": {
+      "types": "./src/index.d.ts",
       "import": "./dist/flexdatalist-vue.es.js",
       "default": "./dist/flexdatalist-vue.es.js"
     },
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "src/index.d.ts"
   ],
   "repository": {
     "type": "git",

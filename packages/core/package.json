@@ -5,19 +5,23 @@
   "type": "module",
   "main": "dist/flexdatalist.umd.cjs",
   "module": "dist/flexdatalist.es.js",
+  "types": "src/flexdatalist.d.ts",
   "exports": {
     ".": {
+      "types": "./src/flexdatalist.d.ts",
       "import": "./dist/flexdatalist.es.js",
       "require": "./dist/flexdatalist.umd.cjs"
     },
     "./css": "./dist/flexdatalist.css",
     "./standalone": "./src/flexdatalist.js",
-    "./standalone/css": "./src/flexdatalist.css"
+    "./standalone/css": "./src/flexdatalist.css",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "src/flexdatalist.js",
-    "src/flexdatalist.css"
+    "src/flexdatalist.css",
+    "src/flexdatalist.d.ts"
   ],
   "style": "dist/flexdatalist.css",
   "repository": {
