@@ -228,6 +228,24 @@ describe('multiple values', () => {
         expect(JSON.parse(fd._hiddenInput.value)).toEqual([{ id: 2, label: 'Porto' }]);
     });
 
+    it('keeps duplicate values with allowDuplicateValues and removes the clicked tag', () => {
+        document.body.innerHTML = '<input id="t" multiple>';
+        const fd = make('#t', { data: CITIES, allowDuplicateValues: true, minLength: 1 });
+        fd.search('Par');
+        document.querySelector('.flexdatalist-results li.item').click();
+        fd.search('Par');
+        document.querySelector('.flexdatalist-results li.item').click();
+        fd.addValue('Lisboa');
+        fd.addValue('Paris');
+        expect(fd._hiddenInput.value).toBe('Paris,Paris,Lisboa,Paris');
+
+        // The × of the last tag removes that tag, not the first "Paris".
+        const tags = fd._multipleEl.querySelectorAll('li.value');
+        tags[tags.length - 1].querySelector('.fdl-remove').click();
+        expect(fd._hiddenInput.value).toBe('Paris,Paris,Lisboa');
+        expect(fd.getText()).toEqual(['Paris', 'Paris', 'Lisboa']);
+    });
+
     it('enforces limitOfValues for addValue() and paste', () => {
         document.body.innerHTML = '<input id="t" multiple>';
         const fd = make('#t', { limitOfValues: 3 });
