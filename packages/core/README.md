@@ -23,6 +23,11 @@ npm install flexdatalist
 
 The class auto-initialises on `DOMContentLoaded` for inputs with the `flexdatalist` class.
 
+Files for a `<script>` tag (both define a global `Flexdatalist` class):
+
+- `src/flexdatalist.js` (+ `src/flexdatalist.css`): the readable source, also exported as `flexdatalist/standalone` (+ `flexdatalist/standalone/css`) so tools can resolve its path. It is a classic script, not an ES module, so `import` it only for its side effect; use `import Flexdatalist from 'flexdatalist'` to get the class.
+- `dist/flexdatalist.umd.js` (+ `dist/flexdatalist.css`): the minified build.
+
 ### Running v2 + v3 side-by-side (avoiding CSS conflicts)
 
 Flexdatalist v3 can namespace its CSS classes so it can coexist with v2 on the same page.
