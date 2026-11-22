@@ -1491,7 +1491,7 @@ class Flexdatalist {
      * @private
      * @param {string|Array|Object} values   The raw value(s) to load.
      * @param {Function}            [cb]     Called with resolved values.
-     * @param {boolean}             [init]   True during constructor init (suppresses events).
+     * @param {boolean}             [init]   True during constructor init (see _extractValue).
      */
     _loadValue(values, cb, init) {
         const o = this._options;
@@ -1554,7 +1554,10 @@ class Flexdatalist {
      *
      * @private
      * @param {string|Array|Object} values
-     * @param {boolean} [init]  Suppress events when true.
+     * @param {boolean} [init]  True while loading the initial value: skips
+     *   `before:flexdatalist.value`. `after:flexdatalist.value`,
+     *   `change:flexdatalist` and `change` still fire, so listeners (and the
+     *   framework wrappers' bound value) learn the resolved initial value.
      */
     _extractValue(values, init) {
         if (!init) {
@@ -1568,10 +1571,6 @@ class Flexdatalist {
             }
         } else {
             result.push(this._extractOne(values));
-        }
-
-        if (init === false) {
-            return;
         }
 
         this._dispatch('after:flexdatalist.value', result);
