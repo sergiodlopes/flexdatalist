@@ -7,7 +7,9 @@
     "build:react": "pnpm --filter flexdatalist-react build",
     "build:svelte": "pnpm --filter flexdatalist-svelte build",
     "test": "pnpm --filter flexdatalist test",
-    "test:demos": "node tests/demos.test.mjs"
+    "test:demos": "node tests/demos.test.mjs",
+    "docs:build": "node scripts/build-docs.mjs",
+    "test:docs-build": "node scripts/build-docs.mjs && node tests/demos.test.mjs --site docs-dist"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

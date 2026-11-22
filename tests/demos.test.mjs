@@ -7,22 +7,30 @@
 //   pnpm exec playwright install chromium   # once
 //   pnpm test:demos                         # all demos
 //   pnpm test:demos -- remote               # only tests whose name contains "remote"
+//   pnpm test:demos -- --site docs-dist     # the built site from pnpm docs:build
 //
-// The demos run against packages/core/src, so no build is needed.
+// By default the demos run against packages/core/src, so no build is needed.
+// With --site the given folder is served as the site root, the way the
+// website serves the pages, so the paths written by docs:build are tested.
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
+const commandArguments = process.argv.slice(2);
+const siteFlagIndex = commandArguments.indexOf('--site');
+const siteFolder = siteFlagIndex === -1 ? null : commandArguments.splice(siteFlagIndex, 2)[1];
 const repositoryRoot = process.env.FLEXDATALIST_ROOT ?? resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const testFilter = process.argv[2] ?? '';
+const servedRoot = siteFolder ? resolve(repositoryRoot, siteFolder) : repositoryRoot;
+const pagesPath = siteFolder ? '' : '/docs';
+const testFilter = commandArguments[0] ?? '';
 const contentTypes = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 
 const server = http.createServer(async (request, response) => {
     const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname));
     try {
-        const body = await readFile(join(repositoryRoot, path));
+        const body = await readFile(join(servedRoot, path));
         response.writeHead(200, { 'Content-Type': contentTypes[extname(path)] ?? 'application/octet-stream' });
         response.end(body);
     } catch {
@@ -32,7 +40,7 @@ const server = http.createServer(async (request, response) => {
 await new Promise(resolve => server.listen(0, resolve));
 const baseUrl = `http://127.0.0.1:${server.address().port}`;
 
-const countries = JSON.parse(await readFile(join(repositoryRoot, 'docs/countries.json'), 'utf8'));
+const countries = JSON.parse(await readFile(join(servedRoot, pagesPath, 'countries.json'), 'utf8'));
 const countryByName = name => countries.find(country => country.name === name);
 
 const browser = await chromium.launch();
@@ -41,7 +49,7 @@ const pageErrors = [];
 page.on('pageerror', error => pageErrors.push(error.message));
 page.on('console', message => { if (message.type() === 'error') pageErrors.push('console: ' + message.text()); });
 
-await page.goto(`${baseUrl}/docs/examples.html`);
+await page.goto(`${baseUrl}${pagesPath}/examples.html`);
 await page.waitForFunction(() => typeof Flexdatalist === 'function' && document.querySelectorAll('.flexdatalist-alias').length > 40);
 await page.waitForTimeout(800); // initial values resolve against the simulated server
 await page.evaluate(() => {
@@ -688,7 +696,7 @@ await test('index', 'docs page loads and hero demo works', async () => {
     const docsPage = await browser.newPage();
     const docsErrors = [];
     docsPage.on('pageerror', error => docsErrors.push(error.message));
-    await docsPage.goto(`${baseUrl}/docs/index.html`);
+    await docsPage.goto(`${baseUrl}${pagesPath}/index.html`);
     await docsPage.waitForFunction(() => document.querySelector('.flexdatalist-alias'));
     const hero = docsPage.locator('.flexdatalist-alias').first();
     await hero.click();
