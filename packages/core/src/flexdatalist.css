@@ -4,41 +4,47 @@
  *
  * Customize via CSS custom properties on any ancestor element:
  *
- *   --fdl-accent          Highlight / active color     (default: #6366f1 indigo)
+ *   --fdl-accent          Accent: tabs, focus, "add" option (default: #5a46df violet)
  *   --fdl-accent-fg       Text on accent bg            (default: #fff)
- *   --fdl-accent-light    Soft tint for match hl       (default: #eef2ff)
- *   --fdl-tag-bg          Tag background               (default: #eef2ff)
- *   --fdl-tag-border      Tag border                   (default: #c7d2fe)
- *   --fdl-tag-fg          Tag text                     (default: #4338ca)
- *   --fdl-radius          Border radius                (default: 0.5rem)
+ *   --fdl-accent-light    Match highlight background   (default: #e6e0ff)
+ *   --fdl-highlight-fg    Match highlight text         (default: #3b2aa8)
+ *   --fdl-hover-bg        Hovered / active result      (default: #f3f3f1)
+ *   --fdl-hover-fg        Text of the active result    (default: #17171a)
+ *   --fdl-tag-bg          Tag background               (default: #efecfe)
+ *   --fdl-tag-border      Tag border                   (default: #d5cefb)
+ *   --fdl-tag-fg          Tag text                     (default: #4936c8)
+ *   --fdl-radius          Border radius                (default: 0.625rem)
+ *   --fdl-item-radius     Result item radius           (default: 0.5rem)
  *   --fdl-font-size       Base font size               (default: 0.875rem)
  *   --fdl-shadow          Dropdown shadow              (default: see below)
  */
 
 /* ─── Custom properties ─────────────────────────────────────── */
 :root {
-    --fdl-accent:       #6366f1;
+    --fdl-accent:       #5a46df;
     --fdl-accent-fg:    #fff;
-    --fdl-accent-light: #eef2ff;
-    --fdl-tag-bg:       #eef2ff;
-    --fdl-tag-border:   #c7d2fe;
-    --fdl-tag-fg:       #4338ca;
-    --fdl-radius:       0.5rem;
+    --fdl-accent-light: #e6e0ff;
+    --fdl-highlight-fg: #3b2aa8;
+    --fdl-tag-bg:       #efecfe;
+    --fdl-tag-border:   #d5cefb;
+    --fdl-tag-fg:       #4936c8;
+    --fdl-radius:       0.625rem;
+    --fdl-item-radius:  0.5rem;
     --fdl-font-size:    0.875rem;
-    --fdl-shadow:       0 4px 6px -1px rgba(0,0,0,.08),
-                        0 10px 25px -3px rgba(0,0,0,.08);
+    --fdl-shadow:       0 2px 4px rgba(23,23,26,.05),
+                        0 16px 40px -12px rgba(23,23,26,.18);
 
     /* surface colors (light mode) */
     --fdl-bg:             #ffffff;
-    --fdl-border:         #e2e8f0;
-    --fdl-text:           #1e293b;
-    --fdl-text-muted:     #64748b;
-    --fdl-hover-bg:       var(--fdl-accent);
-    --fdl-hover-fg:       var(--fdl-accent-fg);
-    --fdl-group-bg:       #f8fafc;
-    --fdl-group-border:   #e2e8f0;
-    --fdl-disabled-bg:    #f8fafc;
-    --fdl-scrollbar:      #cbd5e1;
+    --fdl-border:         #e5e4e0;
+    --fdl-text:           #17171a;
+    --fdl-text-muted:     #6b6b74;
+    --fdl-hover-bg:       #f3f3f1;
+    --fdl-hover-fg:       #17171a;
+    --fdl-group-bg:       transparent;
+    --fdl-group-border:   #e5e4e0;
+    --fdl-disabled-bg:    #f3f3f1;
+    --fdl-scrollbar:      #d6d5d0;
 
     /* fetch animation — keep overrideable */
     --flexdatalist-animation-color:    var(--fdl-accent);
@@ -48,23 +54,26 @@
 /* ─── Dark mode — auto via OS preference ────────────────────── */
 @media (prefers-color-scheme: dark) {
     :root {
-        --fdl-accent:       #818cf8;
-        --fdl-accent-fg:    #fff;
-        --fdl-accent-light: #1e1b4b;
-        --fdl-tag-bg:       #1e1b4b;
-        --fdl-tag-border:   #3730a3;
-        --fdl-tag-fg:       #a5b4fc;
-        --fdl-shadow:       0 4px 6px -1px rgba(0,0,0,.4),
-                            0 10px 25px -3px rgba(0,0,0,.4);
+        --fdl-accent:       #a497ff;
+        --fdl-accent-fg:    #120f24;
+        --fdl-accent-light: #3b3175;
+        --fdl-highlight-fg: #e4dfff;
+        --fdl-tag-bg:       #1c1933;
+        --fdl-tag-border:   #3a3369;
+        --fdl-tag-fg:       #bdb3ff;
+        --fdl-shadow:       0 2px 6px rgba(0,0,0,.5),
+                            0 18px 44px -12px rgba(0,0,0,.7);
 
-        --fdl-bg:           #1e293b;
-        --fdl-border:       #334155;
-        --fdl-text:         #f1f5f9;
-        --fdl-text-muted:   #94a3b8;
-        --fdl-group-bg:     #0f172a;
-        --fdl-group-border: #334155;
-        --fdl-disabled-bg:  #0f172a;
-        --fdl-scrollbar:    #475569;
+        --fdl-bg:           #17171b;
+        --fdl-border:       #2a2a31;
+        --fdl-text:         #ececf0;
+        --fdl-text-muted:   #93939e;
+        --fdl-hover-bg:     #222228;
+        --fdl-hover-fg:     #ececf0;
+        --fdl-group-bg:     transparent;
+        --fdl-group-border: #2a2a31;
+        --fdl-disabled-bg:  #101013;
+        --fdl-scrollbar:    #3a3a43;
 
         --flexdatalist-animation-bg-color: rgba(0,0,0,0);
     }
@@ -73,23 +82,26 @@
 /* ─── Manual override — data-theme="dark" (app) or .fdl-dark ── */
 [data-theme="dark"],
 .fdl-dark {
-    --fdl-accent:       #818cf8;
-    --fdl-accent-fg:    #fff;
-    --fdl-accent-light: #1e1b4b;
-    --fdl-tag-bg:       #1e1b4b;
-    --fdl-tag-border:   #3730a3;
-    --fdl-tag-fg:       #a5b4fc;
-    --fdl-shadow:       0 4px 6px -1px rgba(0,0,0,.4),
-                        0 10px 25px -3px rgba(0,0,0,.4);
+    --fdl-accent:       #a497ff;
+    --fdl-accent-fg:    #120f24;
+    --fdl-accent-light: #3b3175;
+    --fdl-highlight-fg: #e4dfff;
+    --fdl-tag-bg:       #1c1933;
+    --fdl-tag-border:   #3a3369;
+    --fdl-tag-fg:       #bdb3ff;
+    --fdl-shadow:       0 2px 6px rgba(0,0,0,.5),
+                        0 18px 44px -12px rgba(0,0,0,.7);
 
-    --fdl-bg:           #1e293b;
-    --fdl-border:       #334155;
-    --fdl-text:         #f1f5f9;
-    --fdl-text-muted:   #94a3b8;
-    --fdl-group-bg:     #0f172a;
-    --fdl-group-border: #334155;
-    --fdl-disabled-bg:  #0f172a;
-    --fdl-scrollbar:    #475569;
+    --fdl-bg:           #17171b;
+    --fdl-border:       #2a2a31;
+    --fdl-text:         #ececf0;
+    --fdl-text-muted:   #93939e;
+    --fdl-hover-bg:     #222228;
+    --fdl-hover-fg:     #ececf0;
+    --fdl-group-bg:     transparent;
+    --fdl-group-border: #2a2a31;
+    --fdl-disabled-bg:  #101013;
+    --fdl-scrollbar:    #3a3a43;
 
     --flexdatalist-animation-bg-color: rgba(0,0,0,0);
 }
@@ -103,8 +115,9 @@
     z-index: 10000;
     max-height: 280px;
     overflow-y: auto;
+    overscroll-behavior: contain;
     margin: 0;
-    padding: 0.25rem 0;
+    padding: 0.375rem;
     list-style: none;
     background: var(--fdl-bg);
     border: 1px solid var(--fdl-border);
@@ -114,6 +127,13 @@
     font-size: var(--fdl-font-size);
     scrollbar-width: thin;
     scrollbar-color: var(--fdl-scrollbar) transparent;
+}
+
+/* The list (or tab panel) takes focus during keyboard navigation; the
+   active item already shows where the user is, so no ring on the box. */
+.flexdatalist-results:focus,
+.flexdatalist-results ul.fdl-group-panel:focus {
+    outline: none;
 }
 
 /* ─── Grouped tabs mode (outer shell) ───────────────────────── */
@@ -178,8 +198,8 @@
 .flexdatalist-results.fdl-tabs .fdl-group-tab:nth-child(9)  { --fdl-tab-i: 8; }
 .flexdatalist-results.fdl-tabs .fdl-group-tab:nth-child(10) { --fdl-tab-i: 9; }
 
-.flexdatalist-results.fdl-tabs .fdl-group-tab:focus {
-    outline: 2px solid rgba(99,102,241,0.35);
+.flexdatalist-results.fdl-tabs .fdl-group-tab:focus-visible {
+    outline: 2px solid var(--fdl-accent);
     outline-offset: 2px;
 }
 
@@ -216,10 +236,11 @@
     position: absolute;
     inset: 0;
     margin: 0;
-    padding: 0.25rem 0;
+    padding: 0.375rem;
     list-style: none;
     background: var(--fdl-bg);
     overflow-y: auto;
+    overscroll-behavior: contain;
     max-height: 280px;
     scrollbar-width: thin;
     scrollbar-color: var(--fdl-scrollbar) transparent;
@@ -237,36 +258,29 @@
 
 /* ─── Result items ──────────────────────────────────────────── */
 .flexdatalist-results li {
-    padding: 0.5rem 0.875rem;
-    line-height: 1.5;
-    border-bottom: 1px solid var(--fdl-border);
+    padding: 0.5rem 0.625rem;
+    line-height: 1.45;
+    border-radius: var(--fdl-item-radius);
     transition: background 0.1s ease, color 0.1s ease;
     cursor: pointer;
-}
-.flexdatalist-results li:last-child {
-    border-bottom: none;
 }
 
 /* Keyword match highlight */
 .flexdatalist-results li span.highlight {
     font-weight: 600;
     background: var(--fdl-accent-light);
-    color: var(--fdl-accent);
-    border-radius: 0.2em;
-    padding: 0 0.15em;
+    color: var(--fdl-highlight-fg);
+    border-radius: 3px;
+    padding: 0;
+    box-shadow: 0 0 0 1px var(--fdl-accent-light);
 }
 
-/* Hover / keyboard-active state */
+/* Hover / keyboard-active state: a soft fill, the highlight stays as it is */
 .flexdatalist-results li:not(.no-results):not(.group):hover,
 .flexdatalist-results li.active:not(.no-results):not(.group) {
-    background: var(--fdl-accent);
-    color: var(--fdl-accent-fg);
+    background: var(--fdl-hover-bg);
+    color: var(--fdl-hover-fg);
     cursor: pointer;
-}
-.flexdatalist-results li:not(.no-results):not(.group):hover span.highlight,
-.flexdatalist-results li.active:not(.no-results):not(.group) span.highlight {
-    background: rgba(255,255,255,0.25);
-    color: inherit;
 }
 
 /* No results */
@@ -274,22 +288,21 @@
     font-size: 0.8125rem;
     color: var(--fdl-text-muted);
     cursor: default;
-    font-style: italic;
     text-align: center;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 0.625rem;
 }
 
 /* "Add new item" inside no-results */
 .flexdatalist-results li.no-results.add-new-item {
-    font-style: normal;
     color: var(--fdl-accent);
+    font-weight: 500;
     text-align: left;
     cursor: pointer;
 }
 .flexdatalist-results li.no-results.add-new-item:hover,
 .flexdatalist-results li.no-results.add-new-item.active {
-    background: var(--fdl-accent);
-    color: var(--fdl-accent-fg);
+    background: var(--fdl-hover-bg);
+    color: var(--fdl-accent);
 }
 
 /* Fetching loader row */
@@ -307,21 +320,24 @@
 .flexdatalist-results li.group {
     background: var(--fdl-group-bg);
     color: var(--fdl-text-muted);
-    padding: 0.35rem 0.875rem;
-    font-size: 0.7rem;
+    padding: 0.625rem 0.625rem 0.25rem;
+    border-radius: 0;
+    font-size: 0.6875rem;
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     cursor: default;
-    border-bottom: 1px solid var(--fdl-group-border);
+}
+.flexdatalist-results li.group:first-child {
+    padding-top: 0.375rem;
 }
 .flexdatalist-results li .group-name {
-    font-weight: 700;
+    font-weight: 600;
 }
 .flexdatalist-results li .group-item-count {
-    font-size: 0.75em;
     color: var(--fdl-text-muted);
-    margin-left: 0.5rem;
+    font-weight: 500;
+    margin-left: 0.25rem;
 }
 
 /* ─── Multiple / tags container ─────────────────────────────── */
@@ -456,7 +472,7 @@ li.flexdatalist-collapsed-control {
 }
 .flexdatalist-multiple li.value span.fdl-remove:hover {
     opacity: 1;
-    background: rgba(99,102,241,0.15);
+    background: var(--fdl-tag-border);
 }
 
 /* ─── Utility ───────────────────────────────────────────────── */
