@@ -2614,14 +2614,20 @@ class Flexdatalist {
      * @param {string} text  Message template (may contain `{keyword}`).
      */
     _resultsEmpty(text) {
-        if (this._isEmpty(text)) {
+        const o  = this._options;
+        const kw = this._alias.value;
+        const showAddNew = o.showAddNewItem && kw.length > 0;
+
+        // Nothing to show: remove the (already emptied) container instead of
+        // leaving a blank dropdown on screen. An empty noResultsText must not
+        // suppress the "add new item" option either.
+        if (!showAddNew && this._isEmpty(text)) {
+            this._resultsRemove();
             return;
         }
         const container = this._resultsContainer();
-        const o  = this._options;
-        const kw = this._alias.value;
 
-        if (o.showAddNewItem && kw.length > 0) {
+        if (showAddNew) {
             const li = document.createElement('li');
             const classes = this._classes;
             li.className = `${classes.item} ${classes.noResults} ${classes.addNewItem}`;
