@@ -1499,7 +1499,11 @@ class Flexdatalist {
                 vProps = vProps.split(',');
             }
             if (!this._isObj(values)) {
-                values = values.split(',');
+                // Still a string here: in CSV multiple mode _toObj() already
+                // split it. A single value may itself contain commas.
+                values = o.multiple
+                    ? values.split(o.valuesSeparator).map(v => v.trim())
+                    : [values];
             } else if (!Array.isArray(values)) {
                 values = [values];
             }
