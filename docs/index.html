@@ -301,6 +301,12 @@ console.<span class="fn">log</span>(fd.<span class="fn">getValue</span>());
                         <td class="px-4 py-3">HTTP method for remote requests: <code>'get'</code> or <code>'post'</code>.</td>
                     </tr>
                     <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">requestHeaders</td>
+                        <td class="px-4 py-3 text-gray-500">object|null</td>
+                        <td class="px-4 py-3"><code>null</code></td>
+                        <td class="px-4 py-3">Extra HTTP headers sent with every request (e.g. a CSRF or auth token).</td>
+                    </tr>
+                    <tr>
                         <td class="px-4 py-3 font-mono font-semibold">requestContentType</td>
                         <td class="px-4 py-3 text-gray-500">string</td>
                         <td class="px-4 py-3"><code>'x-www-form-urlencoded'</code></td>
@@ -334,6 +340,12 @@ console.<span class="fn">log</span>(fd.<span class="fn">getValue</span>());
                         <td class="px-4 py-3">Match keyword anywhere in the string (not just at the start).</td>
                     </tr>
                     <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">searchEqual</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">Only match items whose text equals the whole keyword.</td>
+                    </tr>
+                    <tr>
                         <td class="px-4 py-3 font-mono font-semibold">searchEqual <span class="badge badge-new">new</span></td>
                         <td class="px-4 py-3 text-gray-500">boolean</td>
                         <td class="px-4 py-3"><code>false</code></td>
@@ -362,12 +374,6 @@ console.<span class="fn">log</span>(fd.<span class="fn">getValue</span>());
                         <td class="px-4 py-3 text-gray-500">Function|null</td>
                         <td class="px-4 py-3"><code>null</code></td>
                         <td class="px-4 py-3">Custom string normalizer called before comparison. Signature: <code>(string) =&gt; string</code>. Useful for accent-insensitive search (e.g. with <em>latinize</em>).</td>
-                    </tr>
-                    <tr>
-                        <td class="px-4 py-3 font-mono font-semibold">redoSearchOnFocus</td>
-                        <td class="px-4 py-3 text-gray-500">boolean</td>
-                        <td class="px-4 py-3"><code>true</code></td>
-                        <td class="px-4 py-3">Re-trigger the search when the alias input re-gains focus.</td>
                     </tr>
 
                     <!-- Display -->
@@ -401,6 +407,24 @@ console.<span class="fn">log</span>(fd.<span class="fn">getValue</span>());
                         <td class="px-4 py-3 text-gray-500">string|false</td>
                         <td class="px-4 py-3"><code>false</code></td>
                         <td class="px-4 py-3">Group results by a property value (e.g. <code>'continent'</code>).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">groupView</td>
+                        <td class="px-4 py-3 text-gray-500">'headers'|'tabs'</td>
+                        <td class="px-4 py-3"><code>'headers'</code></td>
+                        <td class="px-4 py-3">Show groups as headers inside the list, or as tabs with one panel per group.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">groupTabAnimation</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>true</code></td>
+                        <td class="px-4 py-3">Animate the tabs when the results open (<code>groupView: 'tabs'</code> only).</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">resultsContainer</td>
+                        <td class="px-4 py-3 text-gray-500">HTMLElement|string|null</td>
+                        <td class="px-4 py-3"><code>null</code></td>
+                        <td class="px-4 py-3">Render the results inside this element (or selector) instead of a dropdown.</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-3 font-mono font-semibold">maxShownResults</td>
@@ -442,6 +466,18 @@ console.<span class="fn">log</span>(fd.<span class="fn">getValue</span>());
                         <td class="px-4 py-3">Require the user to select a result from the dropdown (disables free-text entry).</td>
                     </tr>
                     <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">showAddNewItem</td>
+                        <td class="px-4 py-3 text-gray-500">boolean</td>
+                        <td class="px-4 py-3"><code>false</code></td>
+                        <td class="px-4 py-3">When nothing matches, offer an "add" option that fires <code>addnew:flexdatalist</code> with the keyword.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">addNewItemText</td>
+                        <td class="px-4 py-3 text-gray-500">string</td>
+                        <td class="px-4 py-3"><code>'No results found for "{keyword}". Click to add it.'</code></td>
+                        <td class="px-4 py-3">Text of the "add" option; <code>{keyword}</code> is replaced.</td>
+                    </tr>
+                    <tr>
                         <td class="px-4 py-3 font-mono font-semibold">limitOfValues</td>
                         <td class="px-4 py-3 text-gray-500">number</td>
                         <td class="px-4 py-3"><code>0</code></td>
@@ -458,6 +494,18 @@ console.<span class="fn">log</span>(fd.<span class="fn">getValue</span>());
                         <td class="px-4 py-3 text-gray-500">boolean</td>
                         <td class="px-4 py-3"><code>false</code></td>
                         <td class="px-4 py-3">Allow adding the same value more than once.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">collapseAfterN</td>
+                        <td class="px-4 py-3 text-gray-500">number|false</td>
+                        <td class="px-4 py-3"><code>50</code></td>
+                        <td class="px-4 py-3">Collapse the tags after this many into a "+N more" control. <code>false</code> never collapses.</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-3 font-mono font-semibold">collapsedValuesText</td>
+                        <td class="px-4 py-3 text-gray-500">string</td>
+                        <td class="px-4 py-3"><code>'{count} More'</code></td>
+                        <td class="px-4 py-3">Label of the collapse control; <code>{count}</code> is replaced.</td>
                     </tr>
                     <tr>
                         <td class="px-4 py-3 font-mono font-semibold">removeOnBackspace</td>
@@ -508,7 +556,7 @@ console.<span class="fn">log</span>(fd.<span class="fn">getValue</span>());
                         <td class="px-4 py-3 font-mono font-semibold">chainedRelatives</td>
                         <td class="px-4 py-3 text-gray-500">boolean</td>
                         <td class="px-4 py-3"><code>false</code></td>
-                        <td class="px-4 py-3">Disable this input until all relatives have a value.</td>
+                        <td class="px-4 py-3">Keep this input read-only while all relatives are empty; it unlocks as soon as any relative has a value.</td>
                     </tr>
 
                     <!-- State -->
@@ -967,23 +1015,9 @@ el.<span class="fn">addEventListener</span>(<span class="st">'change:flexdatalis
 
     <!-- ── FRAMEWORK ADAPTERS ── -->
     <section id="frameworks">
-        <h2 class="text-2xl font-bold mb-1">Framework Adapters</h2>
-        <p class="text-gray-500 mb-6">Use Flexdatalist as a native component in Vue, React, or Svelte. Each adapter is a thin wrapper (~5 kB) — the core does all the heavy lifting.</p>
-
-        <div class="mb-6">
-            <table class="w-full text-sm border-collapse">
-                <thead><tr class="bg-gray-50">
-                    <th class="text-left p-3 border font-semibold">Framework</th>
-                    <th class="text-left p-3 border font-semibold">Package</th>
-                    <th class="text-left p-3 border font-semibold">Install</th>
-                </tr></thead>
-                <tbody>
-                    <tr><td class="p-3 border">Vue 3</td><td class="p-3 border"><code class="bg-gray-100 px-1 rounded text-xs">flexdatalist-vue</code></td><td class="p-3 border"><code class="bg-gray-100 px-1 rounded text-xs">npm install flexdatalist flexdatalist-vue</code></td></tr>
-                    <tr><td class="p-3 border">React 18/19</td><td class="p-3 border"><code class="bg-gray-100 px-1 rounded text-xs">flexdatalist-react</code></td><td class="p-3 border"><code class="bg-gray-100 px-1 rounded text-xs">npm install flexdatalist flexdatalist-react</code></td></tr>
-                    <tr><td class="p-3 border">Svelte 4/5</td><td class="p-3 border"><code class="bg-gray-100 px-1 rounded text-xs">flexdatalist-svelte</code></td><td class="p-3 border"><code class="bg-gray-100 px-1 rounded text-xs">npm install flexdatalist flexdatalist-svelte</code></td></tr>
-                </tbody>
-            </table>
-        </div>
+        <h2 class="text-2xl font-bold mb-1">React, Vue &amp; Svelte</h2>
+        <p class="text-gray-500 mb-6">No adapter package needed: a small component around the core is enough. Render the input inside a wrapper element, then on mount set the initial value, listen to <code class="bg-gray-100 px-1 rounded text-sm">change:flexdatalist</code> and create the instance with <code class="bg-gray-100 px-1 rounded text-sm">new Flexdatalist(input, options)</code>; on unmount call <code class="bg-gray-100 px-1 rounded text-sm">destroy()</code>. Full components are in the <a class="text-indigo-600 underline" href="https://github.com/sergiodlopes/flexdatalist#using-with-react-vue-or-svelte">README</a>.</p>
+        <p class="text-sm text-gray-500 mb-6">The <code class="bg-gray-100 px-1 rounded">flexdatalist-vue</code>, <code class="bg-gray-100 px-1 rounded">flexdatalist-react</code> and <code class="bg-gray-100 px-1 rounded">flexdatalist-svelte</code> packages are deprecated.</p>
 
         <div class="grid md:grid-cols-3 gap-6">
             <!-- Vue -->
@@ -992,20 +1026,30 @@ el.<span class="fn">addEventListener</span>(<span class="st">'change:flexdatalis
                     <h3 class="font-semibold text-emerald-800 text-sm">Vue 3</h3>
                 </div>
                 <pre class="code-block text-xs rounded-none" style="border-radius:0">&lt;<span class="ta">script</span> <span class="at">setup</span>&gt;
-<span class="kw">import</span> { ref } <span class="kw">from</span> <span class="st">'vue'</span>;
-<span class="kw">import</span> { Flexdatalist } <span class="kw">from</span> <span class="st">'flexdatalist-vue'</span>;
+<span class="kw">import</span> { ref, onMounted, onBeforeUnmount } <span class="kw">from</span> <span class="st">'vue'</span>;
+<span class="kw">import</span> Flexdatalist <span class="kw">from</span> <span class="st">'flexdatalist'</span>;
 <span class="kw">import</span> <span class="st">'flexdatalist/css'</span>;
 
-<span class="kw">const</span> city = <span class="fn">ref</span>(<span class="st">''</span>);
+<span class="kw">const</span> props = <span class="fn">defineProps</span>({ modelValue: String });
+<span class="kw">const</span> emit = <span class="fn">defineEmits</span>([<span class="st">'update:modelValue'</span>]);
+<span class="kw">const</span> inputRef = <span class="fn">ref</span>(<span class="kw">null</span>);
+<span class="kw">let</span> instance = <span class="kw">null</span>;
+<span class="kw">const</span> onChange = (e) =&gt;
+  <span class="fn">emit</span>(<span class="st">'update:modelValue'</span>, e.detail.value);
+
+<span class="fn">onMounted</span>(() =&gt; {
+  <span class="kw">const</span> input = inputRef.value;
+  input.value = props.modelValue ?? <span class="st">''</span>;
+  input.<span class="fn">addEventListener</span>(<span class="st">'change:flexdatalist'</span>, onChange);
+  instance = <span class="kw">new</span> <span class="fn">Flexdatalist</span>(input, {
+    url: <span class="st">'/api/cities'</span>, minLength: <span class="nu">2</span>,
+  });
+});
+<span class="fn">onBeforeUnmount</span>(() =&gt; instance?.<span class="fn">destroy</span>());
 &lt;/<span class="ta">script</span>&gt;
 
 &lt;<span class="ta">template</span>&gt;
-  &lt;<span class="ta">Flexdatalist</span>
-    <span class="at">v-model</span>=<span class="st">"city"</span>
-    <span class="at">url</span>=<span class="st">"/api/cities"</span>
-    <span class="at">:min-length</span>=<span class="st">"2"</span>
-    <span class="at">@select</span>=<span class="st">"(item) =&gt; console.log(item)"</span>
-  /&gt;
+  &lt;<span class="ta">div</span>&gt;&lt;<span class="ta">input</span> <span class="at">ref</span>=<span class="st">"inputRef"</span> /&gt;&lt;/<span class="ta">div</span>&gt;
 &lt;/<span class="ta">template</span>&gt;</pre>
             </div>
 
@@ -1014,19 +1058,30 @@ el.<span class="fn">addEventListener</span>(<span class="st">'change:flexdatalis
                 <div class="bg-sky-50 border-b border-sky-200 px-4 py-2">
                     <h3 class="font-semibold text-sky-800 text-sm">React</h3>
                 </div>
-                <pre class="code-block text-xs rounded-none" style="border-radius:0"><span class="kw">import</span> { Flexdatalist } <span class="kw">from</span> <span class="st">'flexdatalist-react'</span>;
+                <pre class="code-block text-xs rounded-none" style="border-radius:0"><span class="kw">import</span> { useEffect, useRef } <span class="kw">from</span> <span class="st">'react'</span>;
+<span class="kw">import</span> Flexdatalist <span class="kw">from</span> <span class="st">'flexdatalist'</span>;
 <span class="kw">import</span> <span class="st">'flexdatalist/css'</span>;
 
-<span class="kw">function</span> <span class="fn">App</span>() {
-  <span class="kw">return</span> (
-    &lt;<span class="ta">Flexdatalist</span>
-      <span class="at">url</span>=<span class="st">"/api/cities"</span>
-      <span class="at">minLength</span>={<span class="nu">2</span>}
-      <span class="at">onSelect</span>={(item) =&gt;
-        console.<span class="fn">log</span>(item)
-      }
-    /&gt;
-  );
+<span class="kw">function</span> <span class="fn">CityPicker</span>({ onChange }) {
+  <span class="kw">const</span> inputRef = <span class="fn">useRef</span>(<span class="kw">null</span>);
+  <span class="kw">const</span> onChangeRef = <span class="fn">useRef</span>(onChange);
+  onChangeRef.current = onChange;
+
+  <span class="fn">useEffect</span>(() =&gt; {
+    <span class="kw">const</span> input = inputRef.current;
+    <span class="kw">const</span> handle = (e) =&gt;
+      onChangeRef.current?.(e.detail.value);
+    input.<span class="fn">addEventListener</span>(<span class="st">'change:flexdatalist'</span>, handle);
+    <span class="kw">const</span> instance = <span class="kw">new</span> <span class="fn">Flexdatalist</span>(input, {
+      url: <span class="st">'/api/cities'</span>, minLength: <span class="nu">2</span>,
+    });
+    <span class="kw">return</span> () =&gt; {
+      input.<span class="fn">removeEventListener</span>(<span class="st">'change:flexdatalist'</span>, handle);
+      instance.<span class="fn">destroy</span>();
+    };
+  }, []);
+
+  <span class="kw">return</span> &lt;<span class="ta">div</span>&gt;&lt;<span class="ta">input</span> <span class="at">ref</span>={inputRef} /&gt;&lt;/<span class="ta">div</span>&gt;;
 }</pre>
             </div>
 
@@ -1036,29 +1091,35 @@ el.<span class="fn">addEventListener</span>(<span class="st">'change:flexdatalis
                     <h3 class="font-semibold text-orange-800 text-sm">Svelte</h3>
                 </div>
                 <pre class="code-block text-xs rounded-none" style="border-radius:0">&lt;<span class="ta">script</span>&gt;
-  <span class="kw">import</span> { Flexdatalist }
-    <span class="kw">from</span> <span class="st">'flexdatalist-svelte'</span>;
+  <span class="kw">import</span> { onMount } <span class="kw">from</span> <span class="st">'svelte'</span>;
+  <span class="kw">import</span> Flexdatalist <span class="kw">from</span> <span class="st">'flexdatalist'</span>;
   <span class="kw">import</span> <span class="st">'flexdatalist/css'</span>;
 
-  <span class="kw">let</span> city = <span class="st">''</span>;
+  <span class="kw">export let</span> value = <span class="st">''</span>;
+  <span class="kw">let</span> input;
+
+  <span class="fn">onMount</span>(() =&gt; {
+    input.value = value;
+    <span class="kw">const</span> handle = (e) =&gt; { value = e.detail.value; };
+    input.<span class="fn">addEventListener</span>(<span class="st">'change:flexdatalist'</span>, handle);
+    <span class="kw">const</span> instance = <span class="kw">new</span> <span class="fn">Flexdatalist</span>(input, {
+      url: <span class="st">'/api/cities'</span>, minLength: <span class="nu">2</span>,
+    });
+    <span class="kw">return</span> () =&gt; {
+      input.<span class="fn">removeEventListener</span>(<span class="st">'change:flexdatalist'</span>, handle);
+      instance.<span class="fn">destroy</span>();
+    };
+  });
 &lt;/<span class="ta">script</span>&gt;
 
-&lt;<span class="ta">Flexdatalist</span>
-  <span class="at">bind:value</span>={city}
-  <span class="at">url</span>=<span class="st">"/api/cities"</span>
-  <span class="at">minLength</span>={<span class="nu">2</span>}
-  <span class="at">on:select</span>={(e) =&gt;
-    console.<span class="fn">log</span>(e.detail)
-  }
-/&gt;</pre>
+&lt;<span class="ta">div</span>&gt;&lt;<span class="ta">input</span> <span class="at">bind:this</span>={input} /&gt;&lt;/<span class="ta">div</span>&gt;</pre>
             </div>
         </div>
 
         <div class="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-sm space-y-1">
-            <p><strong class="text-indigo-800">All options</strong> <span class="text-indigo-700">are available as component props in every adapter.</span></p>
-            <p><strong class="text-indigo-800">All events</strong> <span class="text-indigo-700">are re-emitted as framework-native events (<code class="bg-indigo-100 px-1 rounded">@select</code>, <code class="bg-indigo-100 px-1 rounded">onSelect</code>, <code class="bg-indigo-100 px-1 rounded">on:select</code>).</span></p>
-            <p><strong class="text-indigo-800">Instance methods</strong> <span class="text-indigo-700">are exposed via refs — <code class="bg-indigo-100 px-1 rounded">getValue()</code>, <code class="bg-indigo-100 px-1 rounded">setValue()</code>, <code class="bg-indigo-100 px-1 rounded">search()</code>, <code class="bg-indigo-100 px-1 rounded">clear()</code>, etc.</span></p>
-            <p><strong class="text-indigo-800">Standalone use</strong> <span class="text-indigo-700">still works — just use <code class="bg-indigo-100 px-1 rounded">&lt;script src="flexdatalist.js"&gt;</code> with no framework.</span></p>
+            <p><strong class="text-indigo-800">Why a wrapper element?</strong> <span class="text-indigo-700">Flexdatalist adds its own elements next to the input; a <code class="bg-indigo-100 px-1 rounded">&lt;div&gt;</code> that only this component uses keeps them out of the framework's way.</span></p>
+            <p><strong class="text-indigo-800">Why <code class="bg-indigo-100 px-1 rounded">new</code> and not <code class="bg-indigo-100 px-1 rounded">await init()</code>?</strong> <span class="text-indigo-700">Creating the instance synchronously means unmounting early (or React StrictMode's double mount) can always destroy it.</span></p>
+            <p><strong class="text-indigo-800">Changing the value later</strong> <span class="text-indigo-700">keep the instance and call <code class="bg-indigo-100 px-1 rounded">instance.setValue(value)</code>.</span></p>
         </div>
     </section>
 
