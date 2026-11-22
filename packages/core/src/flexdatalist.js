@@ -2106,18 +2106,23 @@ class Flexdatalist {
 
         const keyword = this._alias.value;
         const relatives = this._relativesData();
-        const cacheKey = this._cacheKeyGen(
-            { relative: relatives, load, keyword, contain: o.searchContain }, o.url
-        );
+        const params = typeof o.params === 'function'
+            ? o.params.call(this._hiddenInput, keyword)
+            : { ...o.params };
+
+        // Everything that changes the response must be part of the key, or two
+        // instances sharing a url (but not params/method) get each other's data.
+        // (The url used to be passed as the numeric hash seed, where a string
+        // coerces to 0, so it was silently left out of the key.)
+        const cacheKey = this._cacheKeyGen({
+            url: o.url, relative: relatives, params, load, keyword, contain: o.searchContain,
+            method: o.requestType, resultsProperty: o.resultsProperty,
+        });
         const cached = this._cacheRead(cacheKey, true);
         if (cached) {
             callback(cached);
             return;
         }
-
-        const params = typeof o.params === 'function'
-            ? o.params.call(this._hiddenInput, keyword)
-            : { ...o.params };
 
         const data = { ...relatives, ...params, selected: this._value, original: o.originalValue };
         if (load !== undefined){
@@ -2306,7 +2311,12 @@ class Flexdatalist {
     // =========================================================================
 
     /**
-     * Filter `data` against `keywords`, caching results in localStorage.
+     * Filter `data` against `keywords`.
+     *
+     * Results are not cached: the former localStorage cache was keyed by the
+     * keyword alone, so it was shared by every instance on the origin (two
+     * fields searching "Por" got each other's matches) and went stale after
+     * the data or the selected tags changed. Local filtering is cheap.
      *
      * @private
      * @param {string}   keywords  The typed keyword string.
@@ -2317,12 +2327,6 @@ class Flexdatalist {
         const o = this._options;
         if (o.searchDisabled) {
             callback(data);
-            return;
-        }
-
-        const cached = this._cacheRead(keywords);
-        if (cached) {
-            callback(cached);
             return;
         }
 
@@ -2343,7 +2347,6 @@ class Flexdatalist {
             }
         }
 
-        this._cacheWrite(keywords, matches, 2);
         this._dispatch('after:flexdatalist.search', { keywords, data, results: matches });
         callback(matches);
     }
@@ -3179,9 +3182,15 @@ class Flexdatalist {
         if (!this._cacheSupported()) {
             return;
         }
-        localStorage.setItem(this._cacheKeyGen(key, undefined, global), JSON.stringify({
-            value, timestamp: Math.round(Date.now() / 1000), lifetime: lifetime || false,
-        }));
+        try {
+            localStorage.setItem(this._cacheKeyGen(key, undefined, global), JSON.stringify({
+                value, timestamp: Math.round(Date.now() / 1000), lifetime: lifetime || false,
+            }));
+        } catch (err) {
+            // QuotaExceededError (large data sets, Safari private mode…):
+            // caching is best-effort and must never break a search.
+            if (this._options.debug) console.warn('Flexdatalist: could not write cache.', err);
+        }
     }
 
     /**
@@ -3197,11 +3206,10 @@ class Flexdatalist {
             return null;
         }
         const k = this._cacheKeyGen(key, undefined, global);
-        const raw = localStorage.getItem(k);
-        if (!raw) {
+        const obj = this._cacheParse(k);
+        if (!obj) {
             return null;
         }
-        const obj = JSON.parse(raw);
         if (obj.lifetime && (Math.round(Date.now() / 1000) - obj.timestamp) >= obj.lifetime) {
             localStorage.removeItem(k);
             return null;
@@ -3222,11 +3230,33 @@ class Flexdatalist {
             if (!key.startsWith('fdl-')) {
                 continue;
             }
-            const obj = JSON.parse(localStorage.getItem(key));
+            const obj = this._cacheParse(key);
             if (obj?.lifetime && (Math.round(Date.now() / 1000) - obj.timestamp) >= obj.lifetime) {
                 localStorage.removeItem(key);
             }
         }
+    }
+
+    /**
+     * Read and parse a cache entry. A corrupt or foreign entry under an
+     * `fdl-` key is removed instead of throwing (which used to break the
+     * constructor via _cacheGC()).
+     *
+     * @private
+     * @param {string} key Full localStorage key.
+     * @returns {{ value: *, timestamp: number, lifetime: number|false }|null}
+     */
+    _cacheParse(key) {
+        try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return null;
+            const obj = JSON.parse(raw);
+            if (obj && typeof obj === 'object' && 'value' in obj) return obj;
+        } catch (_) {
+            // fall through: invalid JSON
+        }
+        try { localStorage.removeItem(key); } catch (_) {}
+        return null;
     }
 
     /**
