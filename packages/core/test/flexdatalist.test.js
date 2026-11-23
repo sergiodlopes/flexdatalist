@@ -83,6 +83,38 @@ describe('rendering', () => {
         expect(item.querySelector('.highlight').textContent).toBe('Par');
     });
 
+    it('ignores _highlight fields in the data (no HTML injection)', () => {
+        document.body.innerHTML = '<input id="t">';
+        window.__highlightInjected = false;
+        const fd = make('#t', {
+            data: [
+                { label: 'Paris', label_highlight: '<img src=x onerror="window.__highlightInjected = true">' },
+                { label: 'Porto', city: 'Porto', city_highlight: '<b>bold</b>' },
+            ],
+            searchIn: ['label'], visibleProperties: ['label', 'city'], minLength: 1,
+        });
+        fd.search('xyz'); // no match: nothing rendered
+        fd.search('P');
+        const items = [...document.querySelectorAll('.flexdatalist-results li.item')];
+        expect(items).toHaveLength(2);
+        for (const item of items) {
+            expect(item.querySelector('img')).toBeNull();
+            expect(item.querySelector('b')).toBeNull();
+        }
+        expect(items[0].querySelector('.highlight').textContent).toBe('P'); // the plugin's own highlight still works
+        expect(items[1].querySelector('.prop-city').textContent.trim()).toBe('Porto');
+        expect(window.__highlightInjected).toBe(false);
+    });
+
+    it('still passes <property>_highlight to item:flexdatalist.results listeners', () => {
+        document.body.innerHTML = '<input id="t">';
+        const fd = make('#t', { data: CITIES, minLength: 1 });
+        const highlights = [];
+        fd.on('item:flexdatalist.results', event => highlights.push(event.detail.label_highlight));
+        fd.search('Par');
+        expect(highlights).toEqual(['<span class="highlight">Par</span>is']);
+    });
+
     it('removes the dropdown instead of leaving it blank when noResultsText is empty', () => {
         document.body.innerHTML = '<input id="t">';
         const fd = make('#t', { data: CITIES, noResultsText: '' });
@@ -261,6 +293,14 @@ describe('nested properties', () => {
 // ---------------------------------------------------------------------------
 
 describe('values', () => {
+    it('does not store search highlights in a JSON value', () => {
+        document.body.innerHTML = '<input id="t">';
+        const fd = make('#t', { data: CITIES, valueProperty: '*', selectionRequired: true, minLength: 1 });
+        fd.search('Lis');
+        document.querySelector('.flexdatalist-results li.item').click();
+        expect(JSON.parse(fd._hiddenInput.value)).toEqual({ id: 3, label: 'Lisboa' });
+    });
+
     it('keeps the selected value when non-editing keys are released', () => {
         document.body.innerHTML = '<input id="t">';
         const fd = make('#t', { data: CITIES, valueProperty: 'id', minLength: 1 });

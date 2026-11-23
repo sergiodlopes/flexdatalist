@@ -75,6 +75,9 @@ const UNSAFE_ITEMS = [
     { id: 1, label: '<img src=x onerror="window.__xssTriggered = true">Image tag' },
     { id: 2, label: '<b>Bold</b> & "quoted" text' },
     { id: 3, label: '<script>window.__xssTriggered = true</script>Script tag' },
+    // A highlight field sent by the server is ignored: only the plugin's own,
+    // escaped highlight is rendered as HTML.
+    { id: 4, label: 'Highlight field', label_highlight: '<img src=x onerror="window.__xssTriggered = true">Injected' },
 ];
 
 const ACCENTED_WORDS = [

@@ -565,10 +565,11 @@ await test('8b display', 'inside a dialog', async () => {
 });
 await test('8b display', 'HTML in data is escaped', async () => {
     await (await alias('display_unsafe')).click();
-    await waitForResults(3);
+    await waitForResults(4);
     await page.waitForTimeout(300);
     const texts = (await resultTexts()).join('|');
     expect(texts.includes('<img') && texts.includes('<b>Bold</b>'), `texts: ${texts}`);
+    expect(texts.includes('Highlight field') && !texts.includes('Injected'), `data highlight field ignored: ${texts}`);
     expectEqual(await page.evaluate(() => window.__xssTriggered ?? false), false, 'script executed');
 });
 

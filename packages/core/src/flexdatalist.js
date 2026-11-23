@@ -8,7 +8,7 @@
  *
  * @author Sergio Dinis Lopes <flexdatalist@sergiodinislopes.pt>
  * @copyright 2016-2026 Sergio Dinis Lopes
- * @version 3.3.0
+ * @version 3.3.1
  * @license MIT
  *
  * Basic usage
@@ -200,6 +200,15 @@ class Flexdatalist {
 
     /** @type {boolean} Whether global document listeners have been attached. */
     static #globalBound = false;
+
+    /**
+     * Key under which a search result keeps the highlight HTML the plugin built
+     * (`{ [property]: html }`). A symbol, so data from a server can never set it:
+     * only this markup, built from escaped text, is rendered as HTML.
+     *
+     * @type {symbol}
+     */
+    static #highlights = Symbol('flexdatalist.highlights');
 
     /**
      * Attribute prefixes that set options, in order of precedence:
@@ -1873,7 +1882,11 @@ class Flexdatalist {
 
         if (this._isJSON() || this._isMixed()) {
             const clone = { ...item };
-            delete clone.name_highlight;
+            // Drop the `<property>_highlight` fields the search added (the
+            // symbol-keyed copy is skipped by JSON.stringify anyway).
+            for (const property of Object.keys(item[Flexdatalist.#highlights] ?? {})) {
+                delete clone[property + '_highlight'];
+            }
             if (Array.isArray(vp)) {
                 const out = {};
                 for (const p of vp) { const v = this._prop(item, p); if (v !== undefined) out[p] = v; }
@@ -2653,6 +2666,7 @@ class Flexdatalist {
     _searchMatch(item, keywords) {
         const o = this._options;
         const out = { ...item };
+        const highlights = {};
         // Distinct keywords matched in any property (a Set, so a word found in
         // two properties is not counted twice).
         const found = new Set();
@@ -2673,9 +2687,13 @@ class Flexdatalist {
                 }
             }
             if (hl !== text) {
-                out[prop + '_highlight'] = this._hlWrap(hl);
+                highlights[prop] = this._hlWrap(hl);
+                // Also exposed as `<property>_highlight` for event listeners
+                // (item:flexdatalist.results), as before; never read back.
+                out[prop + '_highlight'] = highlights[prop];
             }
         }
+        out[Flexdatalist.#highlights] = highlights;
 
         if (!found.size) {
             return false;
@@ -3310,9 +3328,10 @@ class Flexdatalist {
      * @returns {string} HTML-safe string.
      */
     _hlProp(item, property, fallback = '') {
-        // The search stores the highlight under the flat key `<property>_highlight`,
-        // also for a dotted path such as `user.city.name`.
-        const hl = item?.[property + '_highlight'] ?? this._prop(item, property + '_highlight');
+        // Only highlights built by the search (escaped text + highlight spans).
+        // A `<property>_highlight` field in the data itself is ignored: it
+        // would otherwise be inserted as HTML without escaping.
+        const hl = this._isObj(item) ? item[Flexdatalist.#highlights]?.[property] : undefined;
         if (hl !== undefined) {
             return hl;
         }
