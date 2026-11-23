@@ -172,6 +172,39 @@ describe('search', () => {
         press(fd._alias, 'Shift'); await wait(30);
         expect(document.querySelector('.flexdatalist-results')).toBeNull();
     });
+
+    it('closes a "No results" list on Escape', async () => {
+        document.body.innerHTML = '<input id="t">';
+        const fd = make('#t', { data: CITIES, minLength: 1, searchDelay: 5 });
+        fd._alias.focus();
+        type(fd, 'zzz'); await wait(30);
+        expect(document.querySelector('.flexdatalist-results .no-results')).not.toBeNull();
+        press(fd._alias, 'Escape'); await wait(30);
+        expect(document.querySelector('.flexdatalist-results')).toBeNull();
+    });
+
+    it('cancels a search still waiting on searchDelay when Escape is pressed', async () => {
+        document.body.innerHTML = '<input id="t">';
+        const fd = make('#t', { data: CITIES, minLength: 1, searchDelay: 60 });
+        fd._alias.focus();
+        type(fd, 'Pa'); await wait(10);
+        press(fd._alias, 'Escape'); await wait(150);
+        expect(document.querySelector('.flexdatalist-results')).toBeNull();
+        type(fd, 'Par'); await wait(120); // typing again searches as usual
+        expect(resultTexts()).toEqual(['Paris']);
+    });
+
+    it('drops the results of a remote search answered after Escape', async () => {
+        document.body.innerHTML = '<input id="t">';
+        let answer;
+        vi.stubGlobal('fetch', vi.fn(() => new Promise(resolve => { answer = resolve; })));
+        const fd = make('#t', { url: '/api', minLength: 1, searchDelay: 1 });
+        fd._alias.focus();
+        type(fd, 'Pa'); await wait(20);
+        press(fd._alias, 'Escape');
+        answer({ ok: true, json: () => Promise.resolve({ results: CITIES }) }); await wait(20);
+        expect(document.querySelector('.flexdatalist-results')).toBeNull();
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -462,6 +495,45 @@ describe('multiple values', () => {
         fd.clear();
         expect(listener).toHaveBeenCalledTimes(1);
         expect(fd.getText()).toEqual([]);
+    });
+
+    describe('text box with limitOfValues, disable() and readonly()', () => {
+        const textBox = () => document.querySelector('li.input-container');
+        const full = () => {
+            document.body.innerHTML = '<input id="t" multiple value="Paris">';
+            return make('#t', { data: CITIES, limitOfValues: 1 });
+        };
+
+        it('stays hidden after enable() while the limit is reached', () => {
+            const fd = full();
+            expect(textBox().style.display).toBe('none');
+            fd.disable(); fd.enable();
+            expect(textBox().style.display).toBe('none');
+        });
+
+        it('stays hidden after readonly(false) while the limit is reached', () => {
+            const fd = full();
+            fd.readonly(true); fd.readonly(false);
+            expect(textBox().style.display).toBe('none');
+        });
+
+        it('comes back after enable() when below the limit', () => {
+            document.body.innerHTML = '<input id="t" multiple>';
+            const fd = make('#t', { data: CITIES, limitOfValues: 2 });
+            fd.disable();
+            expect(textBox().style.display).toBe('none');
+            fd.enable();
+            expect(textBox().style.display).toBe('');
+        });
+
+        it('stays hidden after enable() while still read-only', () => {
+            document.body.innerHTML = '<input id="t" multiple>';
+            const fd = make('#t', { data: CITIES });
+            fd.readonly(true); fd.disable(); fd.enable();
+            expect(textBox().style.display).toBe('none');
+            fd.readonly(false);
+            expect(textBox().style.display).toBe('');
+        });
     });
 });
 

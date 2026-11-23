@@ -8,7 +8,7 @@
  *
  * @author Sergio Dinis Lopes <flexdatalist@sergiodinislopes.pt>
  * @copyright 2016-2026 Sergio Dinis Lopes
- * @version 3.3.1
+ * @version 3.3.2
  * @license MIT
  *
  * Basic usage
@@ -353,6 +353,10 @@ class Flexdatalist {
 
         /** @type {number|null} setTimeout handle for debounced search. */
         this._searchTimeout = null;
+
+        /** @type {number} Increases with every new or cancelled search; a search
+         *  whose number is no longer current drops its results. */
+        this._searchNumber = 0;
 
         /** @type {number|null} setTimeout handle for the deferred leave check. */
         this._leaveTimeout = null;
@@ -1334,20 +1338,22 @@ class Flexdatalist {
                 }
             }
 
+            const custom = container._fdCustom;
+
+            // Before the check for selectable items below: Escape must also
+            // close a list that only shows the "No results" message.
+            if (key === 'Escape') {
+                if (!custom) instance._resultsRemove();
+                instance._keyboardNavActive = false;
+                instance._alias.focus();
+                return;
+            }
+
             const panel = instance._getActivePanel(container) ?? container;
             // Selectable options only: the "No results" message is not one,
             // the "add new item" entry is.
             const items = [...panel.querySelectorAll('li.item:not(.no-results), li.item.add-new-item')];
             if (!items.length) {
-                return;
-            }
-
-            const custom = container._fdCustom;
-
-            if (key === 'Escape') {
-                if (!custom) instance._resultsRemove();
-                instance._keyboardNavActive = false;
-                instance._alias.focus();
                 return;
             }
 
@@ -1413,6 +1419,9 @@ class Flexdatalist {
         const o = this._options;
 
         if (key === 'Tab') this._resultsRemove();
+        // Escape dismisses the list, so a search typed just before it (still
+        // waiting on searchDelay or loading) must not open it afterwards.
+        if (key === 'Escape') this._cancelSearch();
 
         this._actKeypressValue(e, this._separatorKey()); // Separator key → add tag
         this._actBackspace(e);
@@ -1586,7 +1595,8 @@ class Flexdatalist {
         const kw = this._alias.value;
 
         this._fetchDisabled = false;
-        clearTimeout(this._searchTimeout);
+        this._cancelSearch();
+        const searchNumber = this._searchNumber;
 
         this._searchTimeout = setTimeout(() => {
             const len = kw.length;
@@ -1595,10 +1605,24 @@ class Flexdatalist {
                 this._resultsLoadingStart();
                 this._dataLoad(data => {
                     this._resultsLoadingStop();
+                    // Cancelled (Escape) or replaced by a newer search meanwhile.
+                    if (searchNumber !== this._searchNumber) return;
                     this._searchGet(kw, data, matches => this._resultsShow(matches));
                 });
             }
         }, o.searchDelay);
+    }
+
+    /**
+     * Cancel the search waiting on `searchDelay`, and make a search already
+     * loading its data drop its results instead of opening the list.
+     *
+     * @private
+     */
+    _cancelSearch() {
+        clearTimeout(this._searchTimeout);
+        this._searchTimeout = null;
+        this._searchNumber++;
     }
 
     /**
@@ -2215,7 +2239,8 @@ class Flexdatalist {
         if (!this._multipleEl) return;
         const limit = this._options.limitOfValues;
         const ic = this._multipleEl.querySelector('li.' + this._classes.inputContainer);
-        if (ic) ic.style.display = (limit > 0 && this._texts.length >= limit) ? 'none' : '';
+        const limitReached = limit > 0 && this._texts.length >= limit;
+        if (ic) ic.style.display = (limitReached || this._isTagsLocked()) ? 'none' : '';
     }
 
     /**
@@ -3469,20 +3494,37 @@ class Flexdatalist {
         }
         this._hiddenInput.disabled = disabled;
         this._alias.disabled = disabled;
-
-        if (this._multipleEl) {
-            const classes = this._classes;
-            const btns = this._multipleEl.querySelectorAll('li .' + classes.remove);
-            const ic = this._multipleEl.querySelector('li.' + classes.inputContainer);
-            this._multipleEl.classList.toggle(classes.disabled, disabled);
-            btns.forEach(b => { b.style.display = disabled ? 'none' : ''; });
-            if (ic) {
-                ic.style.display = disabled ? 'none' : '';
-            }
-        }
-
         this._options.disabled = disabled;
+        this._applyTagsLocked();
         return disabled;
+    }
+
+    /**
+     * Whether the tags can't be edited: the input is disabled or read-only.
+     *
+     * @private
+     * @returns {boolean}
+     */
+    _isTagsLocked() {
+        return !!this._options.disabled || !!this._options.readonly;
+    }
+
+    /**
+     * Show or hide the tag remove buttons and the text box for the current
+     * disabled / read-only state. The text box also stays hidden while
+     * `limitOfValues` is reached (_multipleHandleLimit), so enabling an input
+     * that is full, or still read-only, does not show it again.
+     *
+     * @private
+     */
+    _applyTagsLocked() {
+        if (!this._multipleEl) return;
+        const classes = this._classes;
+        const locked = this._isTagsLocked();
+        this._multipleEl.classList.toggle(classes.disabled, locked);
+        this._multipleEl.querySelectorAll('li .' + classes.remove)
+            .forEach(button => { button.style.display = locked ? 'none' : ''; });
+        this._multipleHandleLimit();
     }
 
     /**
@@ -3500,21 +3542,8 @@ class Flexdatalist {
     _applyReadonly(ro) {
         this._hiddenInput.readOnly = ro;
         this._alias.readOnly = ro;
-
-        if (this._multipleEl) {
-            const classes = this._classes;
-            const btns = this._multipleEl.querySelectorAll('li .' + classes.remove);
-            const ic = this._multipleEl.querySelector('li.' + classes.inputContainer);
-            this._multipleEl.classList.toggle(classes.disabled, ro);
-            btns.forEach(b => {
-                b.style.display = ro ? 'none' : '';
-            });
-            if (ic) {
-                ic.style.display = ro ? 'none' : '';
-            }
-        }
-
         this._options.readonly = ro;
+        this._applyTagsLocked();
     }
 
     // =========================================================================
