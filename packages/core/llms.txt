@@ -1,6 +1,6 @@
 # Flexdatalist
 
-> Zero-dependency autocomplete / tag input for plain `<input>` elements (ES6 class, v3). Works without a framework: server-rendered pages (PHP, Django, Rails, templates) can use it with a script tag and `data-*` attributes. Supports remote JSON, static arrays, `<datalist>`, multiple values as tags, grouped results, keyboard navigation and localStorage caching. v3 is a rewrite of the old jQuery plugin (v2); the jQuery API `$(el).flexdatalist()` does NOT exist in v3.
+> Zero-dependency autocomplete / tag input for plain `<input>` elements (ES6 class, v3). Works without a framework: server-rendered pages (PHP, Django, Rails, templates) can use it with a script tag and `fdl-*` attributes. Supports remote JSON, static arrays, `<datalist>`, multiple values as tags, grouped results, keyboard navigation and localStorage caching. v3 is a rewrite of the old jQuery plugin (v2); the jQuery API `$(el).flexdatalist()` does NOT exist in v3.
 
 Package: `flexdatalist` (npm). Source of truth for options: `Flexdatalist.defaults` in `src/flexdatalist.js`.
 
@@ -23,21 +23,21 @@ import 'flexdatalist/css';
 
 - The original `<input>` is kept but hidden; it holds the submitted value. Put `name` on it, as usual. Flexdatalist creates a visible "alias" input next to it for typing; the alias is never submitted.
 - The value (what the form submits) and the text (what the user sees) are different things. `valueProperty` selects the value, `textProperty` the text. With neither set, both come from the first `searchIn` property (`label` by default).
-- Every `<input class="flexdatalist">` on the page initialises itself on `DOMContentLoaded`, with options taken from its `data-*` attributes.
+- Every `<input>` with an `fdl-*` attribute (or the `flexdatalist` class) initialises itself on `DOMContentLoaded`, with options taken from its attributes. Three forms work, in this order of precedence: `fdl-min-length` (preferred), `data-fdl-min-length` (valid HTML), `data-min-length` (v2, still supported).
 - Initialisation is asynchronous. Use `await Flexdatalist.init(...)` or `await instance.ready` before you read or set values.
-- Option precedence: `data-*` attributes override JS options, which override `Flexdatalist.defaults`. `data-*` values are parsed as JSON when possible (`data-min-length="2"` gives a number; `data-search-in="name,city"` gives a comma-separated list).
+- Option precedence: attributes override JS options, which override `Flexdatalist.defaults`. Attribute values are parsed as JSON when possible (`fdl-min-length="2"` gives a number; `fdl-search-in="name,city"` gives a comma-separated list).
 
 ## Minimal examples
 
 Remote search, no JavaScript:
 
 ```html
-<input type="text" name="city_id" class="flexdatalist"
-       data-url="/api/cities"
-       data-min-length="2"
-       data-search-in="name"
-       data-value-property="id"
-       data-search-disabled="true">
+<input type="text" name="city_id"
+       fdl-url="/api/cities"
+       fdl-min-length="2"
+       fdl-search-in="name"
+       fdl-value-property="id"
+       fdl-search-disabled="true">
 ```
 
 Static data, multiple values (tags):

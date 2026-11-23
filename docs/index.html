@@ -37,7 +37,7 @@
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="6" rx="1.5"/><path d="M6.5 6.5h5"/><path d="M5 14h14"/><path d="M5 18h9"/></svg>
             </span>
             <span class="brand-name">flexdatalist</span>
-            <span class="version-pill">v3.2.1</span>
+            <span class="version-pill">v3.3.0</span>
         </a>
         <nav class="topnav" aria-label="Main">
             <a href="#quick-start">Docs</a>
@@ -276,7 +276,7 @@ import 'flexdatalist/css';</code></pre>
                     <span class="step-number" aria-hidden="true">2</span>
                     <div class="step-body">
                         <h3>HTML — auto-init</h3>
-                        <p>Any <code>input.flexdatalist</code> is initialised automatically on <code>DOMContentLoaded</code>.</p>
+                        <p>Any input with an <code>fdl-*</code> attribute (or the class <code>flexdatalist</code>) is initialised automatically on <code>DOMContentLoaded</code>.</p>
                         <div class="code-block">
                             <div class="code-head">
                                 <span class="code-file">index.html</span>
@@ -284,10 +284,9 @@ import 'flexdatalist/css';</code></pre>
                                 <button class="copy-btn" type="button" data-copy aria-label="Copy code"><span data-copy-label>Copy</span></button>
                             </div>
 <pre><code data-lang="html">&lt;input type="text"
-       class="flexdatalist"
-       data-data="/api/items.json"
-       data-search-in="name"
-       data-min-length="1"
+       fdl-data="/api/items.json"
+       fdl-search-in="name"
+       fdl-min-length="1"
        name="item"&gt;</code></pre>
                         </div>
                     </div>
@@ -329,7 +328,7 @@ await fd2.ready; // resolves once initial data is loaded</code></pre>
             <div class="callout-row" id="qs-notes" data-rail="Auto-init &amp; CSS">
                 <div class="callout callout-info">
                     <svg class="callout-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>
-                    <p><strong>Auto-init:</strong> All <code>input.flexdatalist</code> elements are initialised automatically unless they carry the class <code>autodiscover-disabled</code>. Options are read from <code>data-*</code> attributes (camelCase → kebab-case).</p>
+                    <p><strong>Auto-init:</strong> Inputs with an <code>fdl-*</code> attribute, or the class <code>flexdatalist</code>, are initialised automatically unless they carry the class <code>autodiscover-disabled</code>. Options are read from <code>fdl-*</code> attributes (camelCase → kebab-case). For HTML that passes a validator, write <code>data-fdl-*</code>; the v2 form <code>data-*</code> also still works.</p>
                 </div>
                 <div class="callout callout-info">
                     <svg class="callout-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18c1 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1-.3-.3-.4-.6-.4-1 0-.8.7-1.4 1.5-1.4H16a5 5 0 0 0 5-5c0-4.4-4-8-9-8z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>
@@ -365,9 +364,8 @@ await fd2.ready; // resolves once initial data is loaded</code></pre>
                     <div class="code-block">
                         <div class="code-head"><span class="code-file">index.html</span><span class="code-lang">HTML</span><button class="copy-btn" type="button" data-copy aria-label="Copy code"><span data-copy-label>Copy</span></button></div>
 <pre><code data-lang="html">&lt;input
-  class="flexdatalist"
-  data-data="items.json"
-  data-search-in="label"
+  fdl-data="items.json"
+  fdl-search-in="label"
   name="item"&gt;</code></pre>
                     </div>
                 </article>
@@ -377,9 +375,8 @@ await fd2.ready; // resolves once initial data is loaded</code></pre>
                     <div class="code-block">
                         <div class="code-head"><span class="code-file">index.html</span><span class="code-lang">HTML</span><button class="copy-btn" type="button" data-copy aria-label="Copy code"><span data-copy-label>Copy</span></button></div>
 <pre><code data-lang="html">&lt;input
-  class="flexdatalist"
-  data-url="/api/search"
-  data-search-in="name"
+  fdl-url="/api/search"
+  fdl-search-in="name"
   name="item"&gt;</code></pre>
                     </div>
                     <p class="server-receives">Server receives: <code>keyword</code> <code>contain</code> <code>selected</code> <code>load</code> <code>relatives</code></p>
@@ -401,7 +398,7 @@ await fd2.ready; // resolves once initial data is loaded</code></pre>
         <section class="doc-section" id="options" aria-labelledby="options-title">
             <p class="kicker">03 — Reference</p>
             <h2 id="options-title">Options <a class="anchor" href="#options" aria-label="Link to Options">#</a></h2>
-            <p class="lead">Set via JS constructor object or <code>data-*</code> attributes (camelCase → kebab-case). Options can also be changed at any time via <code>fd.setOption(name, value)</code>. Options that name an item property also take a dotted path into nested objects, such as <code>valueProperty: 'employee.number'</code> or <code>searchIn: ['name', 'office.city.name']</code>.</p>
+            <p class="lead">Set via JS constructor object or <code>fdl-*</code> attributes (camelCase → kebab-case, e.g. <code>fdl-min-length="2"</code>; <code>data-fdl-*</code> and <code>data-*</code> also work). Options can also be changed at any time via <code>fd.setOption(name, value)</code>. Options that name an item property also take a dotted path into nested objects, such as <code>valueProperty: 'employee.number'</code> or <code>searchIn: ['name', 'office.city.name']</code>.</p>
 
             <div class="opt-toolbar" data-opt-toolbar>
                 <div class="opt-filter">
@@ -900,7 +897,7 @@ function CityPicker({ onChange }) {
             <h3 class="sub-heading" id="what-changed" data-rail="What changed">What changed <a class="anchor" href="#what-changed" aria-label="Link to What changed">#</a></h3>
             <ul class="checklist">
                 <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><p><strong>CSS:</strong> Same class names, so your overrides keep working. Swap <code>jquery.flexdatalist.css</code> for <code>flexdatalist.css</code> to get the v3 look and the <code>--fdl-*</code> theme variables. Running v2 and v3 side by side? Set <a href="#opt-classPrefix"><code>classPrefix</code></a>, e.g. <code>'fd3-'</code>.</p></li>
-                <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><p><strong>HTML <code>data-*</code> attributes:</strong> Unchanged — all options work the same way.</p></li>
+                <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><p><strong>HTML <code>data-*</code> attributes:</strong> Still work, so existing markup needs no changes. New markup can use the shorter <code>fdl-*</code> form (e.g. <code>fdl-url</code>), which never clashes with other scripts' <code>data-*</code> attributes.</p></li>
                 <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><p><strong>Events:</strong> Same event names. Payload moved from jQuery extra args to <code>e.detail</code> (CustomEvent).</p></li>
                 <li><span class="check" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><p><strong>Alias input:</strong> No longer given a <code>name</code> attribute — never double-submitted.</p></li>
             </ul>

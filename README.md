@@ -43,11 +43,11 @@ Use the core package directly. See [Using with React, Vue or Svelte](#using-with
 Add the `flexdatalist` class to any `<input>` -- it will be initialised automatically on page load:
 
 ```html
-<input type="text" class="flexdatalist"
-       data-url="/api/cities"
-       data-min-length="2"
-       data-search-in="name"
-       data-value-property="id">
+<input type="text"
+       fdl-url="/api/cities"
+       fdl-min-length="2"
+       fdl-search-in="name"
+       fdl-value-property="id">
 ```
 
 ### Programmatic Initialisation
@@ -84,7 +84,7 @@ const [fd] = await Flexdatalist.init('#people', {
 ## Features
 
 - **Zero dependencies** -- no jQuery or other libraries required
-- **Auto-discovery** -- any `<input class="flexdatalist">` initialises on `DOMContentLoaded`
+- **Auto-discovery** -- any `<input>` with `fdl-*` attributes (or the `flexdatalist` class) initialises on `DOMContentLoaded`
 - **Remote data** -- fetch results from any URL using native `fetch()`, with GET or POST support
 - **Static data** -- pass an array of objects or a URL to a static JSON file
 - **`<datalist>` support** -- reads `<option>` elements from a linked datalist
@@ -105,7 +105,9 @@ const [fd] = await Flexdatalist.init('#people', {
 
 ## Options
 
-All options can be set via the constructor, via `data-*` attributes (camelCase becomes kebab-case), or at runtime with `setOption()` (except `multiple`, `classPrefix` and `resultsContainer`, which need a new instance).
+All options can be set via the constructor, via `fdl-*` attributes (camelCase becomes kebab-case: `fdl-min-length="2"`), or at runtime with `setOption()` (except `multiple`, `classPrefix` and `resultsContainer`, which need a new instance).
+
+Three attribute forms are accepted, in this order of precedence: `fdl-url` (short, htmx style), `data-fdl-url` (passes HTML validators) and `data-url` (the v2 form, still supported). Any input with an `fdl-*` or `data-fdl-*` attribute is initialised on page load without needing the `flexdatalist` class.
 
 **Nested properties.** Every option that names an item property (`searchIn`, `textProperty`, `valueProperty`, `visibleProperties`, `iconProperty`, `groupBy`, `resultsProperty` and `{placeholder}` patterns) also takes a dotted path into nested objects:
 

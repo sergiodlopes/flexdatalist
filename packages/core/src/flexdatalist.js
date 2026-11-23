@@ -8,7 +8,7 @@
  *
  * @author Sergio Dinis Lopes <flexdatalist@sergiodinislopes.pt>
  * @copyright 2016-2026 Sergio Dinis Lopes
- * @version 3.2.1
+ * @version 3.3.0
  * @license MIT
  *
  * Basic usage
@@ -37,7 +37,8 @@ class Flexdatalist {
     /**
      * Default option values merged with every instance.
      * All keys can be overridden via the constructor options object or
-     * via `data-*` attributes on the element (camelCase → kebab-case).
+     * via `fdl-*`, `data-fdl-*` or `data-*` attributes on the element
+     * (camelCase → kebab-case).
      *
      * @type {Object}
      */
@@ -201,9 +202,18 @@ class Flexdatalist {
     static #globalBound = false;
 
     /**
+     * Attribute prefixes that set options, in order of precedence:
+     * `fdl-url` (htmx style), `data-fdl-url` (valid HTML), `data-url` (original).
+     *
+     * @type {string[]}
+     */
+    static #attributePrefixes = ['fdl-', 'data-fdl-', 'data-'];
+
+    /**
      * Auto-init on page load (same behaviour as the jQuery plugin): every
-     * `input.flexdatalist` without `.autodiscover-disabled` is initialised on
-     * DOMContentLoaded. Registered when the class is defined — it used to be
+     * `input.flexdatalist`, and every input with an `fdl-*` or `data-fdl-*`
+     * attribute, is initialised on DOMContentLoaded unless it has
+     * `.autodiscover-disabled`. Registered when the class is defined — it used to be
      * registered only when a first instance was created, so a page relying on
      * auto-init alone never initialised anything. Skipped outside a browser
      * (SSR) and when the page has already finished loading.
@@ -211,9 +221,23 @@ class Flexdatalist {
     static {
         if (typeof document !== 'undefined' && document.readyState !== 'complete') {
             document.addEventListener('DOMContentLoaded', () => {
-                Flexdatalist.init('input.flexdatalist:not(.flexdatalist-set):not(.autodiscover-disabled)');
+                Flexdatalist.init(Flexdatalist.#autoInitInputs());
             }, { once: true });
         }
+    }
+
+    /**
+     * Inputs that auto-init picks up: `input.flexdatalist`, plus inputs carrying
+     * any `fdl-*` or `data-fdl-*` attribute (no class needed).
+     *
+     * @returns {HTMLInputElement[]}
+     */
+    static #autoInitInputs() {
+        const skipped = '.flexdatalist-set, .autodiscover-disabled';
+        const hasPrefixedAttribute = input => [...input.attributes]
+            .some(attribute => attribute.name.startsWith('fdl-') || attribute.name.startsWith('data-fdl-'));
+        return [...document.querySelectorAll('input')].filter(input =>
+            !input.matches(skipped) && (input.classList.contains('flexdatalist') || hasPrefixedAttribute(input)));
     }
 
     // =========================================================================
@@ -511,8 +535,9 @@ class Flexdatalist {
     // =========================================================================
 
     /**
-     * Merge defaults, JS options, and element data-attributes into a resolved
-     * options object.  Data-attributes take the form `data-my-option` (kebab-case).
+     * Merge defaults, JS options, and element attributes into a resolved
+     * options object. Attributes take the form `fdl-my-option`, `data-fdl-my-option`
+     * or `data-my-option` (kebab-case), in that order of precedence.
      *
      * @param {Object} jsOpts Options passed to the constructor.
      * @returns {Object} Resolved and normalised options.
@@ -523,9 +548,14 @@ class Flexdatalist {
         const dataOpts = {};
 
         for (const key of Object.keys(Flexdatalist.defaults)) {
-            const attr = 'data-' + key.replace(/([A-Z])/g, ch => '-' + ch.toLowerCase());
-            if (el.hasAttribute(attr)) {
-                let v = el.getAttribute(attr);
+            const kebabName = key.replace(/([A-Z])/g, ch => '-' + ch.toLowerCase());
+            // `fdl-*` (htmx style), `data-fdl-*` (valid HTML) and the original
+            // `data-*`; the prefixed forms win when an input has more than one.
+            const attributeName = Flexdatalist.#attributePrefixes
+                .map(prefix => prefix + kebabName)
+                .find(name => el.hasAttribute(name));
+            if (attributeName) {
+                let v = el.getAttribute(attributeName);
                 try { v = JSON.parse(v); } catch (_) {}
                 dataOpts[key] = v;
             }

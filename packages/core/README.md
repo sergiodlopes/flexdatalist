@@ -18,10 +18,10 @@ npm install flexdatalist
 <link rel="stylesheet" href="flexdatalist.css" />
 <script src="flexdatalist.js"></script>
 
-<input type="text" id="city" class="flexdatalist" data-url="/api/cities" data-min-length="2" />
+<input type="text" id="city" fdl-url="/api/cities" fdl-min-length="2" />
 ```
 
-The class auto-initialises on `DOMContentLoaded` for inputs with the `flexdatalist` class.
+The class auto-initialises on `DOMContentLoaded` for inputs with `fdl-*` (or `data-fdl-*`) attributes, or with the `flexdatalist` class. The v2 `data-*` attributes still work.
 
 Files for a `<script>` tag (both define a global `Flexdatalist` class):
 
@@ -37,14 +37,14 @@ Flexdatalist v3 can namespace its CSS classes so it can coexist with v2 on the s
   - When set (e.g. `fd3-`), v3 will emit prefixed classes like `fd3-flexdatalist-results`: every styled `flexdatalist-*` class (alias, tags wrapper, results, loader, collapsed tags) gets the prefix.
   - Not prefixed: the `flexdatalist` / `flexdatalist-set` markers on the original input (used to find inputs to auto-initialise), the v3-only `fdl-*` classes, and generic classes such as `item`, `value` or `active`, which only appear inside the prefixed elements.
 
-Example (using data-attributes):
+Example (using attributes):
 
 ```html
 <!-- v2 input (default classes) -->
-<input class="flexdatalist" data-url="/api/v2/cities" />
+<input fdl-url="/api/v2/cities" />
 
 <!-- v3 input (prefixed classes) -->
-<input class="flexdatalist" data-class-prefix="fd3-" data-url="/api/v3/cities" />
+<input fdl-class-prefix="fd3-" fdl-url="/api/v3/cities" />
 ```
 
 Example (JS init):

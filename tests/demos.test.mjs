@@ -122,6 +122,20 @@ async function test(section, label, body) {
     await reset();
 }
 
+// --- 0. auto-init ---
+await test('0 auto-init', 'every input with fdl-* attributes starts without the flexdatalist class', async () => {
+    const counts = await page.evaluate(() => {
+        const prefixed = [...document.querySelectorAll('input')].filter(input =>
+            [...input.attributes].some(attribute => attribute.name.startsWith('fdl-') || attribute.name.startsWith('data-fdl-')));
+        return {
+            prefixed: prefixed.length,
+            notStarted: prefixed.filter(input => !input.classList.contains('flexdatalist-set')).map(input => input.name),
+        };
+    });
+    expect(counts.prefixed > 30, `inputs with fdl-* attributes: ${counts.prefixed}`);
+    expectEqual(counts.notStarted.join(','), '', 'inputs not initialised');
+});
+
 // --- 1. datalist ---
 await test('1 datalist', 'basic suggestion', async () => {
     await pick('lang_basic', 'Py', 'Python');
@@ -163,7 +177,7 @@ await test('2 static', 'search in label + color', async () => {
     await waitForResults();
     expectEqual((await resultItems().count()), 4, 'red fruits');
 });
-await test('2 static', 'JSON file via data-data', async () => {
+await test('2 static', 'JSON file via fdl-data', async () => {
     await pick('country_file', 'portu', 'Portugal');
     expectEqual(await valueOf('country_file'), 'Portugal', 'value');
 });
@@ -693,7 +707,7 @@ await test('12 events', 'select, toggle, remove, clear are logged', async () => 
 // --- 13. disabled / readonly ---
 await test('13 disabled', 'disabled attribute, option, readonly', async () => {
     expect(await (await alias('dis_attr')).isDisabled(), 'disabled attribute');
-    expect(await (await alias('dis_opt')).isDisabled(), 'data-disabled');
+    expect(await (await alias('dis_opt')).isDisabled(), 'fdl-disabled');
     const readonlyAlias = await alias('readonly_ex');
     expectEqual(await readonlyAlias.getAttribute('readonly') !== null, true, 'readonly attribute');
     expectEqual(await readonlyAlias.inputValue(), 'Apple', 'readonly text');

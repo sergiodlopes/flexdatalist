@@ -143,6 +143,49 @@ describe('search', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Option attributes (fdl-*, data-fdl-*, data-*)
+// ---------------------------------------------------------------------------
+
+describe('option attributes', () => {
+    it('reads options from fdl-* attributes', () => {
+        document.body.innerHTML = '<input id="t" fdl-min-length="2" fdl-search-in="name,city" fdl-value-property="id">';
+        const fd = make('#t');
+        expect(fd.getOption('minLength')).toBe(2);
+        expect(fd.getOption('searchIn')).toEqual(['name', 'city']);
+        expect(fd.getOption('valueProperty')).toBe('id');
+    });
+
+    it('reads options from data-fdl-* attributes', () => {
+        document.body.innerHTML = '<input id="t" data-fdl-min-length="2" data-fdl-search-in="name">';
+        const fd = make('#t');
+        expect(fd.getOption('minLength')).toBe(2);
+        expect(fd.getOption('searchIn')).toEqual(['name']);
+    });
+
+    it('still reads the v2 data-* attributes', () => {
+        document.body.innerHTML = '<input id="t" data-min-length="2" data-search-in="name">';
+        const fd = make('#t');
+        expect(fd.getOption('minLength')).toBe(2);
+        expect(fd.getOption('searchIn')).toEqual(['name']);
+    });
+
+    it('prefers fdl-* over data-fdl-* over data-*', () => {
+        document.body.innerHTML = '<input id="a" fdl-min-length="1" data-fdl-min-length="2" data-min-length="3">'
+            + '<input id="b" data-fdl-min-length="2" data-min-length="3">';
+        expect(make('#a').getOption('minLength')).toBe(1);
+        expect(make('#b').getOption('minLength')).toBe(2);
+    });
+
+    it('lets attributes override JS options', () => {
+        document.body.innerHTML = '<input id="t" fdl-min-length="4">';
+        expect(make('#t', { minLength: 1 }).getOption('minLength')).toBe(4);
+    });
+
+    // Auto-init runs on DOMContentLoaded, which has already passed here: it is
+    // checked in a real browser by tests/demos.test.mjs (examples page).
+});
+
+// ---------------------------------------------------------------------------
 // Nested properties (dotted paths)
 // ---------------------------------------------------------------------------
 
